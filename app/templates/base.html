@@ -1,0 +1,27 @@
+{% extends 'bootstrap/base.html' %}
+
+{% block title %}
+{% if title %}{{ title }}{% else %}{{ ('Portal Lysimeters') }}{% endif %}
+{% endblock %}
+
+{% block navbar %}
+<div class="-navbar">
+    Portal Lysimeters:
+    {{ current_user.username }}
+
+    <a href="{{ url_for('index') }}">Home</a>
+    {% if current_user.is_anonymous %}
+    <a href="{{ url_for('login') }}">Login</a>
+    {% else %}
+    <a href="{{ url_for('locations') }}">Locations</a>
+    <a href="{{ url_for('users') }}">Users</a>
+    <a href="{{ url_for('logout') }}">Logout</a>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="icon" href="http://localhost:5000/static/img/favicon.png" sizes="32x39" type="image/png">
+<link rel="stylesheet" href="http://localhost:5000/static/css/global.css">
+{% endblock %}

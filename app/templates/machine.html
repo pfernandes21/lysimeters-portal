@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<table class="table table-striped table-bordered table-sm" cellspacing="0" width="100%">
+    <thead>
+        <tr>
+            <th class="th-sm">Id</th>
+
+            <th class="th-sm">Created At</th>
+
+            <th class="th-sm">Motor 20cm</th>
+
+            <th class="th-sm">Motor 40cm</th>
+
+            <th class="th-sm">Motor 60cm</th>
+
+            <th class="th-sm">Humidity 20cm</th>
+
+            <th class="th-sm">Humidity 40cm</th>
+
+            <th class="th-sm">Humidity 60cm</th>
+
+            <th class="th-sm">Pressure</th>
+
+            <th class="th-sm">Water Level 20cm</th>
+
+            <th class="th-sm">Water Level 40cm</th>
+
+            <th class="th-sm">Water Level 60cm</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for reading in machine.readings %}
+        <tr>
+            <td>{{ reading.id }}</td>
+            <td>{{ reading.created_at }}</td>
+            <td>{{ reading.motor_20 }}</td>
+            <td>{{ reading.motor_40 }}</td>
+            <td>{{ reading.motor_60 }}</td>
+            <td>{{ reading.humidity_20 }}</td>
+            <td>{{ reading.humidity_40 }}</td>
+            <td>{{ reading.humidity_60 }}</td>
+            <td>{{ reading.pressure }}</td>
+            <td>{{ reading.water_level_20 }}</td>
+            <td>{{ reading.water_level_40 }}</td>
+            <td>{{ reading.water_level_60 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

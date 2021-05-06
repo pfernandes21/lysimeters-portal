@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<form action="{{ url_for('create_machine') }}" method="get">
+    <input type="hidden" name="location_id" value="{{ location.id }}"/>
+    <button type="submit" class="btn btn-default">
+        Add Machine <span class="glyphicon glyphicon-plus"></span>
+    </button>
+</form>
+
+<table class="table table-striped table-bordered table-sm" cellspacing="0" width="100%">
+    <thead>
+        <tr>
+            <th class="th-sm">Name</th>
+
+            <th class="th-sm">Master</th>
+
+            <th class="th-sm">Created At</th>
+
+            <th class="th-sm">Updated At</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for machine in location.machines %}
+        <tr>
+            <td>{{ machine.name }}</td>
+            <td>{{ machine.id|int() == location.master_id|int() }}</td>
+            <td>{{ machine.created_at }}</td>
+            <td>{{ machine.updated_at }}</td>
+            <td style="display: flex; justify-content: space-evenly;">
+                <form action="/machine/{{ machine.id }}" method="get">
+                    <button type="submit">Data</button>
+                </form>
+                <form action="/machine/{{ machine.id }}/delete" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

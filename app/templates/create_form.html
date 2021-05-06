@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<div class="row">
+    <div class="col-md-4">
+        {{ wtf.quick_form(form) }}
+    </div>
+</div>
+
+{% if title == 'Create Location' %}
+<div id="map" style="width: 100%; height: 400px;"></div>
+
+<script>
+    var map;
+    var marker;
+    var latitude = document.getElementById("latitude");
+    var longitude = document.getElementById("longitude");
+
+    function initMap() {
+        var portugal = new google.maps.LatLng(39.693519, -7.996114);
+        map = new google.maps.Map(
+            document.getElementById('map'), { center: portugal, zoom: 6 });
+
+        google.maps.event.addListener(map, 'click', function (event) {
+            console.log(event.latLng);
+            addMarker(event.latLng);
+        });
+
+        latitude.addEventListener('change', updateLatitude);
+        longitude.addEventListener('change', updateLongitude);
+        function updateLatitude(e) {
+            if(longitude.value) {
+                addMarker(new google.maps.LatLng(e.target.value, longitude.value))
+            }
+        }
+        function updateLongitude(e) {
+            if(latitude.value) {
+                addMarker(new google.maps.LatLng(e.target.value, latitude.value))
+            }
+        }
+    }
+
+    function addMarker(location) {
+        if (marker) {
+            marker.setMap(null);
+            marker = null;
+        }
+
+        marker = new google.maps.Marker({
+            position: location,
+            map: map
+        });
+
+        var lat = marker.getPosition().lat();
+        var lng = marker.getPosition().lng();
+        console.log(lat);
+        console.log(lng);
+        latitude.value = lat;
+        longitude.value = lng;
+    }
+</script>
+
+<!-- Async script executes immediately and must be after any DOM elements used in callback. -->
+<script async
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAQfMvz5_Stvt3Mmun0iOGu9GQFjgFjEJ0&libraries=places&callback=initMap">
+</script>
+{% endif %}
+
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+{{ messages[-1] }}
+{% endif %}
+{% endwith %}
+
+{% endblock %}
