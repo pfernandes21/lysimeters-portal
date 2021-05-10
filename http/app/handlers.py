@@ -1,5 +1,5 @@
 from app.models import User, Location, Machine, Reading
-from app import db, mail
+from app import db, mail, Config
 from app.finders import Finders
 import hashlib
 import random
@@ -96,7 +96,7 @@ class Handlers():
 
     @classmethod
     def get_rain_time(cls, location):
-        params = {"appid":"db64586420a51fe58124d2465efe276b", "exclude":"minutely,daily,current", "lat":location.latitude, "lon":location.longitude}
+        params = {"appid":Config.OPEN_WEATHER_KEY, "exclude":"minutely,daily,current", "lat":location.latitude, "lon":location.longitude}
         try:
             weather = requests.get("https://api.openweathermap.org/data/2.5/onecall", params=params)
             hourlyWeather = weather.json()["hourly"]

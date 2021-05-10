@@ -2,7 +2,7 @@ from flask import render_template, flash, redirect, url_for, request, jsonify
 from flask_login import current_user, login_user, logout_user, login_required
 from flask_mail import Message
 from werkzeug.urls import url_parse
-from app import app, csrf, mail
+from app import app, csrf, mail, Config
 from app.forms import LoginForm, MachineForm, LocationForm, UserForm
 from app.finders import Finders
 from app.handlers import Handlers
@@ -207,7 +207,7 @@ def machine(machine_id):
 @csrf.exempt
 def reading():
     api_key = request.headers.get("Authorization", None)
-    if api_key is None or api_key != "Bearer 123":
+    if api_key is None or api_key != "Bearer " + Config.MACHINE_API_TOKEN:
         return jsonify({"status":"error", "msg":"Unauthorized"}), 401
 
     try:
