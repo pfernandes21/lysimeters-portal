@@ -32,7 +32,7 @@ import click
 @app.cli.command("create-user")
 @click.option('-u', '--username', default="admin", help='New user username')
 @click.option('-e', '--email', help='New user email')
-def create_user(username, email, password):
+def create_user(username, email):
     user = Handlers.create_user(username, email)
     if user:
         print("User created successfully. Password sent to email.")
