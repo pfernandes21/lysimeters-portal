@@ -1,9 +1,10 @@
 from app.models import User, Location, Machine, Reading
-from app import db, mail, Config
+from app import app, db, mail
 from app.finders import Finders
 import hashlib
 import random
 import string
+import csv
 from datetime import datetime, timedelta
 
 class Handlers():
@@ -96,7 +97,7 @@ class Handlers():
 
     @classmethod
     def get_rain_time(cls, location):
-        params = {"appid":Config.OPEN_WEATHER_KEY, "exclude":"minutely,daily,current", "lat":location.latitude, "lon":location.longitude}
+        params = {"appid":app.config.OPEN_WEATHER_KEY, "exclude":"minutely,daily,current", "lat":location.latitude, "lon":location.longitude}
         try:
             weather = requests.get("https://api.openweathermap.org/data/2.5/onecall", params=params)
             hourlyWeather = weather.json()["hourly"]
@@ -135,6 +136,18 @@ class Handlers():
 
         try:
             mail.send_message(recipients=[user.email for user in Finders.get_users()], html=message, subject=subject)
+            return True
+        except:
+            return False
+
+    @classmethod
+    def get_machine_csv(cls, machine):
+        try:
+            outfile = open(app.config.CSV_FILE_PATH, 'w')
+            outcsv = csv.writer(outfile)
+            records = machine.readings
+            outcsv.writerow([column.name for column in Reading.__mapper__.columns])
+            [outcsv.writerow([getattr(curr, column.name) for column in Reading.__mapper__.columns]) for curr in records]
             return True
         except:
             return False

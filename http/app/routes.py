@@ -1,18 +1,23 @@
-from flask import render_template, flash, redirect, url_for, request, jsonify
+from flask import render_template, flash, redirect, url_for, request, jsonify, send_file, abort
 from flask_login import current_user, login_user, logout_user, login_required
 from flask_mail import Message
 from werkzeug.urls import url_parse
-from app import app, csrf, mail, Config
+from app import app, csrf, mail
 from app.forms import LoginForm, MachineForm, LocationForm, UserForm
 from app.finders import Finders
 from app.handlers import Handlers
 import json
+import csv
 from types import SimpleNamespace
-import hashlib
+from datetime import datetime
 
 @app.route("/health")
 def health():
     return "alive"
+
+@app.context_processor
+def inject_now():
+    return {'now': datetime.utcnow()}
 
 @app.route("/")
 @app.route("/home")
@@ -203,11 +208,27 @@ def machine(machine_id):
 
     return render_template("machine.html", title=machine.name, machine=machine)
 
+@app.route("/machine/<int:machine_id>/csv", methods=["GET"])
+@login_required
+def machine_csv(machine_id):
+    machine = Finders.get_machine_by_id(machine_id)
+    if machine is None:
+        flash("Cant find machine")
+        return redirect(url_for("locations"))
+
+    if not Handlers.get_machine_csv(machine):
+        abort(500)
+
+    try:
+        return send_file(app.config.CSV_FILE_PATH, as_attachment=True)
+    except FileNotFoundError:
+        abort(404)
+
 @app.route("/api/reading", methods=["POST"])
 @csrf.exempt
 def reading():
     api_key = request.headers.get("Authorization", None)
-    if api_key is None or api_key != "Bearer " + Config.MACHINE_API_TOKEN:
+    if api_key is None or api_key != "Bearer " + app.config.MACHINE_API_TOKEN:
         return jsonify({"status":"error", "msg":"Unauthorized"}), 401
 
     try:

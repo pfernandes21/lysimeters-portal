@@ -6,6 +6,7 @@ from flask_login import LoginManager
 from flask_bootstrap import Bootstrap
 from flask_wtf import CSRFProtect
 from flask_mail import Mail
+import os
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -20,6 +21,8 @@ csrf = CSRFProtect(app)
 Bootstrap(app)
 
 mail = Mail(app)
+
+app.config.CSV_FILE_PATH = os.path.abspath(os.path.dirname(__file__) + '/files/data.csv')
 
 from app import routes, models
 
