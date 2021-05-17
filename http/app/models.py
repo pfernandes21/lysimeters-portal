@@ -8,8 +8,135 @@ from flask_login import UserMixin
 def load_user(id):
     return User.query.get(int(id))
 
-class User(UserMixin, db.Model):
+class ModelMixin():
     id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    @classmethod
+    def query(cls):
+        try:
+            result = db.session.query(cls)
+            db.session.commit()
+            return result
+        except:
+            db.session.rollback()
+            return None
+
+    @classmethod
+    def all(cls):
+        try:
+            result = db.session.query(cls).all()
+            db.session.commit()
+            return result
+        except:
+            db.session.rollback()
+            return None
+
+    @classmethod
+    def delete_all(cls):
+        try:
+            db.session.query(cls).delete()
+            db.session.commit()
+        except:
+            db.session.rollback()
+        return
+
+    @classmethod
+    def first(cls):
+        try:
+            result = db.session.query(cls).first()
+            db.session.commit()
+            return result
+        except:
+            db.session.rollback()
+            return None
+
+    @classmethod
+    def last(cls):
+        try:
+            result = db.session.query(cls).order_by(cls.created_at.desc()).first()
+            db.session.commit()
+            return result
+        except:
+            db.session.rollback()
+            return None
+
+    @classmethod
+    def get(cls, id):
+        try:
+            result = cls.query.get(id)
+            db.session.commit()
+            return result
+        except:
+            db.session.rollback()
+            return None
+
+    @classmethod
+    def get_by(cls, **kw):
+        try:
+            result = cls.query.filter_by(**kw).first()
+            db.session.commit()
+            return result
+        except:
+            db.session.rollback()
+            return None
+
+    @classmethod
+    def get_or_create(cls, **kw):
+        r = cls.get_by(**kw)
+        if not r:
+            r = cls(**kw)
+            try:
+                db.session.add(r)
+                db.session.commit()
+            except:
+                db.session.rollback()
+        return r
+
+    @classmethod
+    def create(cls, **kw):
+        r = cls(**kw)
+        try:
+            db.session.add(r)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            return None
+        else:
+            return r
+
+    def save(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except:
+            db.session.rollback()
+        return self
+
+    def delete(self) -> bool:
+        try:
+            db.session.delete(self)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            return False
+        else:
+            return True
+
+    def update(self, **kwargs):
+        try:
+            db.session.query(self.__class__).filter_by(id=self.id).update(
+                kwargs)
+            db.session.commit()
+        except Exception as e:
+            print(e)
+            db.session.rollback()
+            return None
+        else:
+            return self
+
+class User(db.Model, ModelMixin, UserMixin):
     username = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
     password_hash = db.Column(db.String(128))
@@ -23,8 +150,7 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return '<User {}>'.format(self.username)
 
-class Location(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+class Location(db.Model, ModelMixin):
     name = db.Column(db.String(100), index=True, unique=True)
     status = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -37,23 +163,29 @@ class Location(db.Model):
     def __repr__(self):
         return '<Location {}>'.format(self.name)
 
-class Machine(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+class Machine(db.Model, ModelMixin):
     name = db.Column(db.String(64), index=True, unique=True)
     location_id = db.Column(db.Integer, db.ForeignKey('location.id'))
     location = db.relationship("Location", back_populates="machines")
+    soil_id = db.Column(db.Integer, db.ForeignKey('soil.id'))
+    soil = db.relationship("Soil")
     readings = db.relationship("Reading", back_populates="machine")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+    updating = db.Column(db.Boolean, default=False)
+
     def is_master(self):
         return self.id == self.location.master_id
 
     def __repr__(self):
         return '<Machine {}, Location {}>'.format(self.id, self.location.name)
 
-class Reading(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+class Soil(db.Model, ModelMixin):
+    name = db.Column(db.String(64), index=True, unique=True)
+    humidity_level = db.Column(db.Integer)
+
+    def __repr__(self):
+        return '<Name {}, Humidity Level {}>'.format(self.name, self.humidity_level)
+
+class Reading(db.Model, ModelMixin):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'))
     machine = db.relationship("Machine", back_populates="readings")

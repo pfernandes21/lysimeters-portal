@@ -1,4 +1,4 @@
-from app.models import User, Location, Machine, Reading
+from app.models import User, Location, Machine, Reading, Soil
 from app import app, db, mail
 from app.finders import Finders
 import hashlib
@@ -11,15 +11,18 @@ class Handlers():
 
     @classmethod
     def create_user(cls, username, email):
-        user = User(username=username, email=email)
-        password = cls.generate_secret()
-        user.set_password(password)
-
-        user = create(user)
+        try:
+            user = User(username=username, email=email)
+            password = cls.generate_secret()
+            user.set_password(password)
+            user.save()
+        except:
+            return None, "Failed to create user"
+        
         if user:
             subject="Lysimeters Portal - Registration"
             message=f'Successfully registered in <a href="https://google.pt">Lysimeters Portal</a><br><br><b>Username</b>: {user.username}<br><b>Password</b>: {password}'
-
+            print(message)
             try:
                 mail.send_message(recipients=['pedrocoelhofernandes@gmail.com'], html=message, subject=subject)
                 return user, None
@@ -31,11 +34,11 @@ class Handlers():
 
     @classmethod
     def update_user(cls, user, **kwargs):
-        return update(user, **kwargs)
+        return User.update(user, **kwargs)
 
     @classmethod
     def delete_user(cls, user):
-        return delete(user)
+        return User.delete(user)
 
     @classmethod
     def generate_secret(cls, length=16):
@@ -43,38 +46,47 @@ class Handlers():
 
     @classmethod
     def create_location(cls, name, latitude, longitude):
-        location = Location(name=name, latitude=latitude, longitude=longitude)
-        return create(location)
+        return Location.create(name=name, latitude=latitude, longitude=longitude)
 
     @classmethod
     def update_location(cls, location, **kwargs):
-        return update(location, **kwargs)
+        return Location.update(location, **kwargs)
 
     @classmethod
     def delete_location(cls, location):
-        delete(location)
+        Location.delete(location)
 
     @classmethod
-    def create_machine(cls, name, location_id):
-        machine = Machine(name=name, location_id=location_id)
-        return create(machine)
+    def create_machine(cls, name, location_id, soil_id):
+        return Machine.create(name=name, location_id=location_id, soil_id=soil_id)
 
     @classmethod
     def update_machine(cls, machine, **kwargs):
-        return update(machine, **kwargs)
+        return Machine.update(machine, **kwargs)
 
     @classmethod
     def delete_machine(cls, machine):
-        return delete(machine)     
+        return Machine.delete(machine)
+
+    @classmethod
+    def create_soil(cls, name, humidity_level):
+        return Soil.create(name=name, humidity_level=humidity_level)
+
+    @classmethod
+    def update_soil(cls, soil, **kwargs):
+        return Soil.update(soil, **kwargs)
+
+    @classmethod
+    def delete_soil(cls, soil):
+        return Soil.delete(soil)   
 
     @classmethod
     def create_reading(cls, **kwargs):
-        reading = Reading(**kwargs)
-        return create(reading)
+        return Reading.create(**kwargs)
 
     @classmethod
     def delete_reading(cls, reading):
-        return delete(reading)
+        return Reading.delete(reading)
 
     @classmethod
     def check_time_hash(cls, time):
@@ -151,33 +163,3 @@ class Handlers():
             return True
         except:
             return False
-
-def create(obj):
-    try:
-        db.session.add(obj)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return None, e
-    else:
-        return obj
-
-def update(obj, **kwargs):
-    try:
-        db.session.query(obj.__class__).filter_by(id=obj.id).update(kwargs)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return None, e
-    else:
-        return obj
-
-def delete(obj):
-    try:
-        db.session.delete(obj)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return False, e
-    else:
-        return True

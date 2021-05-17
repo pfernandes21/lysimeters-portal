@@ -16,11 +16,12 @@
 #define levelSensorPin60 3
 #define sleepInterruptPin 2
 #define numberOfSamples 25
-#define humidityThreshold 60
 #define airLevel 760
 #define waterLevel 450
 #define pressureUpperThreshold 45
 #define pressureLowerThreshold 40
+
+int humidityThreshold = 60;
 
 char humidity20_msg[15];
 char humidity40_msg[15];
@@ -28,7 +29,14 @@ char humidity60_msg[15];
 char pressure_msg[15];
 char msg[103];
 bool pickupMsgSent = false;
-enum lysState {Normal = 0, Collecting = 1, Collected = 2};
+
+enum lysState
+{
+  Normal = 0,
+  Collecting = 1,
+  Collected = 2,
+  Broken = 3
+};
 enum lysState lysimeters[3] = {Normal, Normal, Normal};
 enum lysState nextLysimeters[3] = {Normal, Normal, Normal};
 
@@ -39,7 +47,8 @@ uint8_t hash[32];
 String pin;
 #define SHA256_BLOCK_SIZE 32
 
-typedef struct {
+typedef struct
+{
   uint8_t data[64];
   uint32_t datalen;
   unsigned long long bitlen;
@@ -50,15 +59,15 @@ void sha256_init(SHA256_CTX *ctx);
 void sha256_update(SHA256_CTX *ctx, const uint8_t data[], size_t len);
 void sha256_final(SHA256_CTX *ctx, uint8_t hash[]);
 
-#define ROTLEFT(a,b) (((a) << (b)) | ((a) >> (32-(b))))
-#define ROTRIGHT(a,b) (((a) >> (b)) | ((a) << (32-(b))))
+#define ROTLEFT(a, b) (((a) << (b)) | ((a) >> (32 - (b))))
+#define ROTRIGHT(a, b) (((a) >> (b)) | ((a) << (32 - (b))))
 
-#define CH(x,y,z) (((x) & (y)) ^ (~(x) & (z)))
-#define MAJ(x,y,z) (((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
-#define EP0(x) (ROTRIGHT(x,2) ^ ROTRIGHT(x,13) ^ ROTRIGHT(x,22))
-#define EP1(x) (ROTRIGHT(x,6) ^ ROTRIGHT(x,11) ^ ROTRIGHT(x,25))
-#define SIG0(x) (ROTRIGHT(x,7) ^ ROTRIGHT(x,18) ^ ((x) >> 3))
-#define SIG1(x) (ROTRIGHT(x,17) ^ ROTRIGHT(x,19) ^ ((x) >> 10))
+#define CH(x, y, z) (((x) & (y)) ^ (~(x) & (z)))
+#define MAJ(x, y, z) (((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
+#define EP0(x) (ROTRIGHT(x, 2) ^ ROTRIGHT(x, 13) ^ ROTRIGHT(x, 22))
+#define EP1(x) (ROTRIGHT(x, 6) ^ ROTRIGHT(x, 11) ^ ROTRIGHT(x, 25))
+#define SIG0(x) (ROTRIGHT(x, 7) ^ ROTRIGHT(x, 18) ^ ((x) >> 3))
+#define SIG1(x) (ROTRIGHT(x, 17) ^ ROTRIGHT(x, 19) ^ ((x) >> 10))
 
 static const uint32_t k[64] = {
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -71,12 +80,13 @@ static const uint32_t k[64] = {
   0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
 
-void sha256_transform(SHA256_CTX *ctx, const uint8_t data[]) {
+void sha256_transform(SHA256_CTX *ctx, const uint8_t data[])
+{
   uint32_t a, b, c, d, e, f, g, h, i, j, t1, t2, m[64];
 
   for (i = 0, j = 0; i < 16; ++i, j += 4)
     m[i] = ((uint32_t)data[j] << 24) | ((uint32_t)data[j + 1] << 16) | ((uint32_t)data[j + 2] << 8) | ((uint32_t)data[j + 3]);
-  for ( ; i < 64; ++i)
+  for (; i < 64; ++i)
     m[i] = SIG1(m[i - 2]) + m[i - 7] + SIG0(m[i - 15]) + m[i - 16];
 
   a = ctx->state[0];
@@ -88,7 +98,8 @@ void sha256_transform(SHA256_CTX *ctx, const uint8_t data[]) {
   g = ctx->state[6];
   h = ctx->state[7];
 
-  for (i = 0; i < 64; ++i) {
+  for (i = 0; i < 64; ++i)
+  {
     t1 = h + EP1(e) + CH(e, f, g) + k[i] + m[i];
     t2 = EP0(a) + MAJ(a, b, c);
     h = g;
@@ -125,13 +136,16 @@ void sha256_init(SHA256_CTX *ctx)
   ctx->state[7] = 0x5be0cd19;
 }
 
-void sha256_update(SHA256_CTX *ctx, const uint8_t data[], size_t len) {
+void sha256_update(SHA256_CTX *ctx, const uint8_t data[], size_t len)
+{
   uint32_t i;
 
-  for (i = 0; i < len; ++i) {
+  for (i = 0; i < len; ++i)
+  {
     ctx->data[ctx->datalen] = data[i];
     ctx->datalen++;
-    if (ctx->datalen == 64) {
+    if (ctx->datalen == 64)
+    {
       sha256_transform(ctx, ctx->data);
       ctx->bitlen += 512;
       ctx->datalen = 0;
@@ -139,18 +153,21 @@ void sha256_update(SHA256_CTX *ctx, const uint8_t data[], size_t len) {
   }
 }
 
-void sha256_final(SHA256_CTX *ctx, uint8_t hash[]) {
+void sha256_final(SHA256_CTX *ctx, uint8_t hash[])
+{
   uint32_t i;
 
   i = ctx->datalen;
 
   // Pad whatever data is left in the buffer.
-  if (ctx->datalen < 56) {
+  if (ctx->datalen < 56)
+  {
     ctx->data[i++] = 0x80;
     while (i < 56)
       ctx->data[i++] = 0x00;
   }
-  else {
+  else
+  {
     ctx->data[i++] = 0x80;
     while (i < 64)
       ctx->data[i++] = 0x00;
@@ -172,10 +189,11 @@ void sha256_final(SHA256_CTX *ctx, uint8_t hash[]) {
 
   // Since this implementation uses little endian byte ordering and SHA uses big endian,
   // reverse all the bytes when copying the final state to the output hash.
-  for (i = 0; i < 4; ++i) {
-    hash[i]      = (ctx->state[0] >> (24 - i * 8)) & 0x000000ff;
-    hash[i + 4]  = (ctx->state[1] >> (24 - i * 8)) & 0x000000ff;
-    hash[i + 8]  = (ctx->state[2] >> (24 - i * 8)) & 0x000000ff;
+  for (i = 0; i < 4; ++i)
+  {
+    hash[i] = (ctx->state[0] >> (24 - i * 8)) & 0x000000ff;
+    hash[i + 4] = (ctx->state[1] >> (24 - i * 8)) & 0x000000ff;
+    hash[i + 8] = (ctx->state[2] >> (24 - i * 8)) & 0x000000ff;
     hash[i + 12] = (ctx->state[3] >> (24 - i * 8)) & 0x000000ff;
     hash[i + 16] = (ctx->state[4] >> (24 - i * 8)) & 0x000000ff;
     hash[i + 20] = (ctx->state[5] >> (24 - i * 8)) & 0x000000ff;
@@ -184,9 +202,11 @@ void sha256_final(SHA256_CTX *ctx, uint8_t hash[]) {
   }
 }
 
-char *btoh(char *dest, uint8_t *src, int len) {
+char *btoh(char *dest, uint8_t *src, int len)
+{
   char *d = dest;
-  while ( len-- ) sprintf(d, "%02x", (unsigned char)*src++), d += 2;
+  while (len--)
+    sprintf(d, "%02x", (unsigned char)*src++), d += 2;
   return dest;
 }
 
@@ -209,32 +229,35 @@ String SHA256(String data)
   return (btoh(hex, hash, 32));
 }
 
-long readVcc() {
+long readVcc()
+{
   // Read 1.1V reference against AVcc
   // set the reference to Vcc and the measurement to the internal 1.1V reference
 #if defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
   ADMUX = _BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
-#elif defined (__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__)
-  ADMUX = _BV(MUX5) | _BV(MUX0) ;
+#elif defined(__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__)
+  ADMUX = _BV(MUX5) | _BV(MUX0);
 #else
   ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
 #endif
 
-  delay(2); // Wait for Vref to settle
+  delay(2);            // Wait for Vref to settle
   ADCSRA |= _BV(ADSC); // Start conversion
-  while (bit_is_set(ADCSRA, ADSC)); // measuring
+  while (bit_is_set(ADCSRA, ADSC))
+    ; // measuring
 
-  uint8_t low  = ADCL; // must read ADCL first - it then locks ADCH
+  uint8_t low = ADCL;  // must read ADCL first - it then locks ADCH
   uint8_t high = ADCH; // unlocks both
 
   int result = (high << 8) | low;
 
   result = 11253L / result; // Calculate Vcc (in dV); 1125300 = 1.1*1023*10
-  return result; // Vcc in decivolts
+  return result;            // Vcc in decivolts
 }
 
-void hibernate(time_t wake_time) {
-  RTC.setAlarm(ALM1_MATCH_DATE , second(wake_time), minute(wake_time), hour(wake_time), day(wake_time));
+void hibernate(time_t wake_time)
+{
+  RTC.setAlarm(ALM1_MATCH_DATE, second(wake_time), minute(wake_time), hour(wake_time), day(wake_time));
   RTC.alarm(ALARM_1);
   sleep_enable();
   attachInterrupt(digitalPinToInterrupt(sleepInterruptPin), wakeUp, LOW);
@@ -243,12 +266,14 @@ void hibernate(time_t wake_time) {
   sleep_cpu();
 }
 
-void wakeUp() {
+void wakeUp()
+{
   sleep_disable();
   detachInterrupt(digitalPinToInterrupt(sleepInterruptPin));
 }
 
-float getHumidity(int pin) {
+float getHumidity(int pin)
+{
   float humidity = 0.0;
 
   for (int i = 0; i < numberOfSamples; i++)
@@ -259,26 +284,33 @@ float getHumidity(int pin) {
   return map(humidity / numberOfSamples, airLevel, waterLevel, 0, 100);
 }
 
-void getLysimeters() {
-  if (lysimeters[0] == Normal && getHumidity(humidityPin20) > humidityThreshold) {
+void getLysimeters()
+{
+  if (lysimeters[0] == Normal && getHumidity(humidityPin20) > humidityThreshold)
+  {
     nextLysimeters[0] = Collecting;
     pressurizeValve(valvePin20);
   }
-  else if (lysimeters[1] == Normal && getHumidity(humidityPin40) > humidityThreshold) {
+  else if (lysimeters[1] == Normal && getHumidity(humidityPin40) > humidityThreshold)
+  {
     nextLysimeters[1] = Collecting;
     pressurizeValve(valvePin40);
   }
-  else if (lysimeters[2] == Normal && getHumidity(humidityPin60) > humidityThreshold) {
+  else if (lysimeters[2] == Normal && getHumidity(humidityPin60) > humidityThreshold)
+  {
     nextLysimeters[2] = Collecting;
     pressurizeValve(valvePin60);
   }
-  else if (lysimeters[0] == Collecting && digitalRead(levelSensorPin20)) {
+  else if (lysimeters[0] == Collecting && digitalRead(levelSensorPin20))
+  {
     nextLysimeters[0] = Collected;
   }
-  else if (lysimeters[1] == Collecting && digitalRead(levelSensorPin40)) {
+  else if (lysimeters[1] == Collecting && digitalRead(levelSensorPin40))
+  {
     nextLysimeters[1] = Collected;
   }
-  else if (lysimeters[2] == Collecting && digitalRead(levelSensorPin60)) {
+  else if (lysimeters[2] == Collecting && digitalRead(levelSensorPin60))
+  {
     nextLysimeters[2] = Collected;
   }
 }
@@ -288,53 +320,121 @@ float getPressure()
   return (analogRead(pressureSensorPin) - 25.658) / 3.4799;
 }
 
-void pressurize()
+bool pressurize()
 {
+  time_t t = RTC.get();
   digitalWrite(motorPin, HIGH);
-  while (getPressure() < pressureUpperThreshold)
+  while (getPressure() < pressureUpperThreshold && RTC.get() < (t + 10))
   {
   }
   digitalWrite(motorPin, LOW);
-}
 
-void pressurizeValve(int valvePin) {
-  digitalWrite(valvePin, HIGH);
-  pressurize();
-  digitalWrite(valvePin, LOW);
-}
-
-void send_msg(char const *warning, int attempt) {
-  dtostrf(getHumidity(humidityPin20), 4, 3, humidity20_msg);
-  dtostrf(getHumidity(humidityPin40), 4, 3, humidity40_msg);
-  dtostrf(getHumidity(humidityPin60), 4, 3, humidity60_msg);
-  dtostrf(getPressure(), 4, 3, pressure_msg);
-  sprintf(msg, "{\"id\":%d,\"h20\":%s,\"h40\":%s,\"h60\":%s,\"p\":%s,\"t\":%s%s}", ID, humidity20_msg, humidity40_msg, humidity60_msg, pressure_msg, SHA256(String(RTC.get()) + "lisimetros").c_str(), warning);
-  Serial.println(msg);
-
-  time_t t = RTC.get();
-  while (!Serial.available() && RTC.get() > (t + 10)) {}
-  if (Serial.available()) {
-    StaticJsonDocument<200> resp;
-    DeserializationError error = deserializeJson(resp, Serial.readString().c_str());
-    if (error) return;
-
-    const char* status = resp["status"];
-    if (!strcmp(status, "ok")) {
-      time_t wake_time = resp["wake"];
-      if (wake_time > (RTC.get() + 3600) && wake_time < (RTC.get() + 10800)) {
-        hibernate(wake_time);
-      }
-    }
-    else if (!strcmp(status, "pickup")) {
-      pickupMsgSent = true;
-    }
-    else if (!strcmp(status, "error") && attempt < 3) {
-      send_msg(warning, attempt + 1);
-    }
+  if (RTC.get() >= (t + 10))
+  {
+    return false;
+  }
+  else
+  {
+    return true;
   }
 }
 
-void setup() {
+void pressurizeValve(int valvePin)
+{
+  int lysimeterIndex = getLysimeterIndexFromValvePin(valvePin);
+  if (lysimeters[lysimeterIndex] == Broken)
+  {
+    return;
+  }
+
+  digitalWrite(valvePin, HIGH);
+  if (!pressurize())
+  {
+    lysimeters[lysimeterIndex] = Broken;
+    digitalWrite(valvePin, LOW);
+    send_msg(", \"e\":\"true\"", 0);
+  }
+  else {
+    digitalWrite(valvePin, LOW);
+  }
+}
+
+int getLysimeterIndexFromValvePin(int valvePin)
+{
+  switch (valvePin)
+  {
+    case valvePin20:
+      return 0;
+    case valvePin40:
+      return 1;
+    case valvePin60:
+      return 2;
+    default:
+      return 0;
+  }
+}
+
+void send_msg(char const *warning, int attempt)
+{
+  if (attempt < 3)
+  {
+    dtostrf(getHumidity(humidityPin20), 4, 3, humidity20_msg);
+    dtostrf(getHumidity(humidityPin40), 4, 3, humidity40_msg);
+    dtostrf(getHumidity(humidityPin60), 4, 3, humidity60_msg);
+    dtostrf(getPressure(), 4, 3, pressure_msg);
+    sprintf(msg, "{\"id\":%d,\"h20\":%s,\"h40\":%s,\"h60\":%s,\"p\":%s,\"t\":%s%s}", ID, humidity20_msg, humidity40_msg, humidity60_msg, pressure_msg, SHA256(String(RTC.get()) + "lisimetros").c_str(), warning);
+    Serial.println(msg);
+  }
+  else
+  {
+    return;
+  }
+
+  time_t t = RTC.get();
+  while (!Serial.available() && RTC.get() < (t + 10))
+  {
+  }
+  if (Serial.available())
+  {
+    StaticJsonDocument<200> resp;
+    DeserializationError error = deserializeJson(resp, Serial.readString().c_str());
+    if (error)
+      return;
+
+    const char *status = resp["status"];
+    if (!strcmp(status, "ok"))
+    {
+      time_t wake_time = resp["wake"];
+      if (wake_time > (RTC.get() + 3600) && wake_time < (RTC.get() + 10800) && lysimeters[0] == Normal && lysimeters[1] == Normal && lysimeters[2] == Normal)
+      {
+        hibernate(wake_time);
+      }
+    }
+    else if (!strcmp(status, "pickup"))
+    {
+      pickupMsgSent = true;
+    }
+    else if (!strcmp(status, "config"))
+    {
+      int level = resp["level"];
+      humidityThreshold = level;
+      send_msg(", \"config\":\"ok\"", 0);
+    }
+    else if (!strcmp(status, "error"))
+    {
+      send_msg(warning, attempt + 1);
+    }
+  }
+  else
+  {
+    send_msg(warning, attempt + 1);
+  }
+}
+
+void setup()
+{
+  Serial.begin(9600);
+
   pinMode(motorPin, OUTPUT);
   pinMode(valvePin20, OUTPUT);
   pinMode(valvePin40, OUTPUT);
@@ -354,79 +454,104 @@ void setup() {
   RTC.squareWave(SQWAVE_NONE);
   RTC.alarmInterrupt(ALARM_1, true);
 
-  Serial.begin(115200);
   send_msg(", \"init\":\"true\"", 0);
 }
 
-void loop() {
+void loop()
+{
   getLysimeters();
 
-  //waiting for collection
-  if (lysimeters[0] == Collected && lysimeters[1] == Collected && lysimeters[2] == Collected) {
-    if (!pickupMsgSent) {
-      //send pickup msg
+  //waiting for pickup
+  if (lysimeters[0] == Collected && lysimeters[1] == Collected && lysimeters[2] == Collected)
+  {
+    //if pickup not confirmed send warning
+    if (!pickupMsgSent)
+    {
+      send_msg(", \"l20\":\"end\"", 0);
+      send_msg(", \"l40\":\"end\"", 0);
+      send_msg(", \"l60\":\"end\"", 0);
       delay(10000);
     }
-    else {
-      while (true) {};
+    //sleep indefinatly
+    else
+    {
+      hibernate(RTC.get() + 7 * 24 * 60 * 60);
     }
   }
-  else if (nextLysimeters[0] != lysimeters[0]) {
+  //lysimeter 0 (20cm) changed
+  else if (nextLysimeters[0] != lysimeters[0])
+  {
     //if start collecting send warning + data, pressurize, open valve
-    if (lysimeters[0] == Normal && nextLysimeters[0] == Collecting) {
+    if (lysimeters[0] == Normal && nextLysimeters[0] == Collecting)
+    {
       send_msg(", \"l20\":\"start\"", 0);
     }
     //else if end collecting send warning + data
-    else if (lysimeters[0] == Collecting && nextLysimeters[0] == Collected) {
+    else if (lysimeters[0] == Collecting && nextLysimeters[0] == Collected)
+    {
       send_msg(", \"l20\":\"end\"", 0);
     }
 
     lysimeters[0] = nextLysimeters[0];
   }
-  else if (nextLysimeters[1] != lysimeters[1]) {
+  //lysimeter 1 (40cm) changed
+  else if (nextLysimeters[1] != lysimeters[1])
+  {
     //if start collecting send warning + data, pressurize, open valve
-    if (lysimeters[1] == Normal && nextLysimeters[1] == Collecting) {
+    if (lysimeters[1] == Normal && nextLysimeters[1] == Collecting)
+    {
       send_msg(", \"l40\":\"start\"", 0);
     }
     //else if end collecting send warning + data, close valve
-    else if (lysimeters[1] == Collecting && nextLysimeters[1] == Collected) {
+    else if (lysimeters[1] == Collecting && nextLysimeters[1] == Collected)
+    {
       send_msg(", \"l40\":\"end\"", 0);
     }
 
     lysimeters[1] = nextLysimeters[1];
   }
-  else if (nextLysimeters[2] != lysimeters[2]) {
+  //lysimeter 2 (60cm) changed
+  else if (nextLysimeters[2] != lysimeters[2])
+  {
     //if start collecting send warning + data, pressurize, open valve
-    if (lysimeters[2] == Normal && nextLysimeters[2] == Collecting) {
+    if (lysimeters[2] == Normal && nextLysimeters[2] == Collecting)
+    {
       send_msg(", \"l60\":\"start\"", 0);
     }
     //else if end collecting send warning + data, close valve
-    else if (lysimeters[2] == Collecting && nextLysimeters[2] == Collected) {
+    else if (lysimeters[2] == Collecting && nextLysimeters[2] == Collected)
+    {
       send_msg(", \"l60\":\"end\"", 0);
     }
 
     lysimeters[2] = nextLysimeters[2];
   }
-  else {
+  else
+  {
     //if all normal send data
-    if (lysimeters[0] == Normal || lysimeters[1] == Normal || lysimeters[2] == Normal) {
+    if (lysimeters[0] == Normal || lysimeters[1] == Normal || lysimeters[2] == Normal)
+    {
       send_msg("", 0);
     }
   }
 
-  //  //if one or more collecting pressurize
-  //  if (lysimeters[0] == Collecting) {
-  //    pressurizeValve(valvePin20);
-  //  }
-  //  if (lysimeters[1] == Collecting) {
-  //    pressurizeValve(valvePin40);
-  //  }
-  //  if (lysimeters[2] == Collecting) {
-  //    pressurizeValve(valvePin60);
-  //  }
+  //if one or more collecting pressurize
+  if (lysimeters[0] == Collecting)
+  {
+    pressurizeValve(valvePin20);
+  }
+  if (lysimeters[1] == Collecting)
+  {
+    pressurizeValve(valvePin40);
+  }
+  if (lysimeters[2] == Collecting)
+  {
+    pressurizeValve(valvePin60);
+  }
 
   //if battery low
-  if (readVcc() < 50) {
+  if (!pickupMsgSent && readVcc() < 50)
+  {
     send_msg(", \"b\":\"low\"", 0);
   }
 

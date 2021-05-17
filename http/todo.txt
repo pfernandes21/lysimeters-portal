@@ -1,3 +1,4 @@
-add observacoes to machine
+add observacoes to machine/locais
 material list
 api
+configurar humidade de acordo com o tipo de solo

@@ -3,7 +3,7 @@ from flask_login import current_user, login_user, logout_user, login_required
 from flask_mail import Message
 from werkzeug.urls import url_parse
 from app import app, csrf, mail
-from app.forms import LoginForm, MachineForm, LocationForm, UserForm
+from app.forms import LoginForm, MachineForm, LocationForm, UserForm, SoilForm
 from app.finders import Finders
 from app.handlers import Handlers
 import json
@@ -95,9 +95,7 @@ def delete_user(user_id):
 @app.route("/locations", methods=["GET"])
 @login_required
 def locations():
-    page = request.args.get("page", 1)
     locations = Finders.get_locations()
-
     return render_template("locations.html", title="Locations", locations=locations)
 
 @app.route("/location", methods=["GET", "POST"])
@@ -142,6 +140,31 @@ def location(location_id):
 
     return render_template("location.html", title=location.name, location=location)
 
+@app.route("/soils", methods=["GET"])
+@login_required
+def soils():
+    soils = Finders.get_soils()
+    return render_template("soils.html", title="Soils", soils=soils)
+
+@app.route("/soil", methods=["GET", "POST"])
+@login_required
+def create_soil():
+    form = SoilForm()
+    if form.validate_on_submit():
+        name = form.name.data
+        humidity_level = form.humidity_level.data
+        if Finders.get_soil_by_name(name):
+            flash("Soil already exists")
+            return render_template("create_form.html", title="Create Soil", form=form)
+    
+        if Handlers.create_soil(name, humidity_level) is None:
+            flash("Failed to create soil")
+            return render_template("create_form.html", title="Create Soil", form=form)
+
+        return redirect(url_for("soils"))
+
+    return render_template("create_form.html", title="Create Soil", form=form)
+
 @app.route("/machine", methods=["GET", "POST"])
 @login_required
 def create_machine():
@@ -156,25 +179,18 @@ def create_machine():
         location_id = form.location_id.data
         location = Finders.get_location_by_id(location_id)
         if not location:
-            flash("Machine already exists")
+            flash("Location not found")
             return redirect(url_for("locations"))
 
         name = form.name.data
         if Finders.get_machine_by_name(name):
-            form.location_id = location_id
             flash("Machine already exists")
-            return render_template("create_form.html", title="Create Machine", form=form)
+            return redirect(url_for("locations"))
 
-        machine = Handlers.create_machine(name, location_id)
+        machine = Handlers.create_machine(name, location_id, form.soil_id.data)
         if machine is None:
             form.location_id = location_id
             flash("Failed to create machine")
-            return render_template("create_form.html", title="Create Machine", form=form)
-
-        first_reading = Handlers.create_reading(machine_id = machine.id)
-        if first_reading is None:
-            flash("Failed to create machine reading")
-            Handlers.delete_machine(machine)
             return render_template("create_form.html", title="Create Machine", form=form)
 
         if form.master.data:
@@ -183,6 +199,25 @@ def create_machine():
         return redirect(url_for("location", location_id=location_id))
 
     return render_template("create_form.html", title="Create Machine", form=form)
+
+@app.route("/machine/<string:machine_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_machine(machine_id):
+    machine = Finders.get_machine_by_id(machine_id)
+    if machine is None:
+        flash("Cant find machine")
+        return redirect(url_for("locations"))
+
+    if request.method == "GET":
+        form = MachineForm(location_id=machine.location_id, name=machine.name, soil_id=machine.soil_id, master=machine.is_master())
+    elif request.method == "POST":
+        form = MachineForm()
+
+    if form.validate_on_submit():
+        machine = Handlers.update_machine(machine, name=form.name.data, location_id=form.location_id.data, soil_id=form.soil_id.data, updating=True)
+        return redirect(url_for("location", location_id=machine.location_id))
+
+    return render_template("create_form.html", title="Edit Machine", form=form)
 
 @app.route("/machine/<string:machine_id>/delete", methods=["POST"])
 @login_required
@@ -243,8 +278,8 @@ def reading():
     except AttributeError:
         return jsonify({"status":"error", "msg":"Missing info"}), 500
 
-    if(not Handlers.check_time_hash(time)):
-        return jsonify({"status":"error", "msg":"Wrong info"}), 500
+    if(not Handlers.check_time_hash(time.lower())):
+        return jsonify({"status":"error", "msg":"Wrong info"}), 401
 
     machine = Finders.get_machine_by_id(id)
     if not machine:
@@ -259,6 +294,9 @@ def reading():
 
     if None in [humidity_20, humidity_40, humidity_60, pressure]:
         return jsonify({"status":"error", "msg":"Missing data"}), 500
+
+    if hasattr(data, "config"):
+        machine = Handlers.update_machine(machine, updated=False)
     
     if hasattr(data, "l20"):
         Handlers.create_reading(machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
@@ -318,10 +356,11 @@ def reading():
             except:
                 return jsonify({"status":"error", "msg":"Failed to set values"}), 500
 
+        if machine.updated:
+            return jsonify({"status":"config", "level":machine.soil.humidity_level})
+
         rain_time = Handlers.get_rain_time(machine.location)
         if rain_time is None:
             return jsonify({"status":"error", "msg":"Failed to fetch weather"}), 500
         else:
             return jsonify({"status":"ok", "wake":rain_time.timestamp})
-
-    return jsonify({"status":"ok"})

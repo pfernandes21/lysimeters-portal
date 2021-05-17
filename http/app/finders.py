@@ -1,4 +1,4 @@
-from app.models import User, Location, Machine, Reading
+from app.models import User, Location, Machine, Reading, Soil
 
 class Finders():
 
@@ -29,6 +29,18 @@ class Finders():
     @classmethod
     def get_location_by_name(cls, name):
         return Location.query.filter_by(name=name).first()
+
+    @classmethod
+    def get_soils(cls):
+        return Soil.query.all()
+
+    @classmethod
+    def get_soil_by_id(cls, id):
+        return Soil.query.filter_by(id=id).first()
+
+    @classmethod
+    def get_soil_by_name(cls, name):
+        return Soil.query.filter_by(name=name).first()
 
     @classmethod
     def get_machine_by_id(cls, id):
