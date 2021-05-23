@@ -131,7 +131,18 @@ class Handlers():
         return datetime.now().replace(hour=4, minute=0) + timedelta(days=2)
 
     @classmethod
-    def send_sample_email(cls, machine, lysimeter, location):
+    def send_sample_start_email(cls, machine, lysimeter, location):
+        subject=f"Lysimeters Portal - Sample Collected in {location}"
+        message=f"The {machine} {lysimeter} located in {location} started collecting a sample at {datetime.now().strftime('%d/%m/%Y, %H:%M:%S')}."
+
+        try:
+            mail.send_message(recipients=[user.email for user in Finders.get_users()], html=message, subject=subject)
+            return True
+        except:
+            return False
+
+    @classmethod
+    def send_sample_end_email(cls, machine, lysimeter, location):
         subject=f"Lysimeters Portal - Sample Collected in {location}"
         message=f"The {machine} {lysimeter} located in {location} has collected a sample at {datetime.now().strftime('%d/%m/%Y, %H:%M:%S')}."
 

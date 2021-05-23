@@ -21,7 +21,7 @@ void setup()
   String imei, mcc_mnc, sim_imsi, sim_iccid, uid;
   Dev.noSleep();
 
-  Serial.begin(115200);
+  Serial.begin(9600);
 
   Serial.printf("Arduino      %s\n", Dev.getVersion());
   Dev.getImei(imei);
@@ -54,7 +54,7 @@ void setup()
   delay(200);
   coap.response(callback_response);
   coap.start();
-  Serial.println("Ready");
+  Serial.println("Coap ready");
   delay(200);
 }
 
@@ -65,16 +65,15 @@ void loop()
     int nindex = msg.lastIndexOf('\n', msg.length() - 2);
     msg = msg.substring(nindex > -1 ? nindex : 0);
     msg.trim();
-    Serial.println("Got " + msg);
-    coap.put(IPAddress(85, 246, 38, 211), 5683, "lys", msg.c_str());
-    Serial.println("sending " + msg);
-    t = millis();
+    if (msg.length() > 0) {
+      coap.put(IPAddress(85, 246, 38, 211), 5683, "lys", msg.c_str());
+      t = millis();
+    }
   }
 
   if (msg.length() > 0 && millis() > t + 60000) {
     //coap.put(IPAddress(146, 193, 41, 162), 5683, "lys", msg.c_str());
     coap.put(IPAddress(85, 246, 38, 211), 5683, "lys", msg.c_str());
-    Serial.println("sending " + msg);
     t = millis();
   }
 

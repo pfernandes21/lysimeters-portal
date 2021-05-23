@@ -278,8 +278,8 @@ def reading():
     except AttributeError:
         return jsonify({"status":"error", "msg":"Missing info"}), 500
 
-    if(not Handlers.check_time_hash(time.lower())):
-        return jsonify({"status":"error", "msg":"Wrong info"}), 401
+    # if(not Handlers.check_time_hash(time.lower())):
+    #     return jsonify({"status":"error", "msg":"Wrong info"}), 401
 
     machine = Finders.get_machine_by_id(id)
     if not machine:
@@ -303,7 +303,9 @@ def reading():
             motor_20=(data.l20=="start"), motor_40=last.motor_40, motor_60=last.motor_60, \
             water_level_20=(data.l20=="end"), water_level_40=last.water_level_40, water_level_60=last.water_level_60)
         
-        if Handlers.send_sample_email(machine.name, "20cm lysimeter", machine.location):
+        if data.l20=="start" and Handlers.send_sample_start_email(machine.name, "20cm lysimeter", machine.location):
+            return jsonify({{"status":"pickup"}})
+        elif data.l20=="end" and Handlers.send_sample_end_email(machine.name, "20cm lysimeter", machine.location):
             return jsonify({{"status":"pickup"}})
         else:
             return jsonify({"status":"error", "msg":"Failed to send email"}), 500
@@ -313,7 +315,9 @@ def reading():
             motor_40=(data.l40=="start"), motor_20=last.motor_20, motor_60=last.motor_60, \
             water_level_40=(data.l40=="end"), water_level_20=last.water_level_20, water_level_60=last.water_level_60)
         
-        if Handlers.send_sample_email(machine.name, "40cm lysimeter", machine.location):
+        if data.l40=="start" and Handlers.send_sample_start_email(machine.name, "40cm lysimeter", machine.location):
+            return jsonify({{"status":"pickup"}})
+        elif data.l40=="end" and Handlers.send_sample_end_email(machine.name, "40cm lysimeter", machine.location):
             return jsonify({{"status":"pickup"}})
         else:
             return jsonify({"status":"error", "msg":"Failed to send email"}), 500
@@ -323,7 +327,9 @@ def reading():
             motor_60=(data.l60=="start"), motor_40=last.motor_40, motor_20=last.motor_20, \
             water_level_60=(data.l60=="end"), water_level_40=last.water_level_40, water_level_20=last.water_level_20)
         
-        if Handlers.send_sample_email(machine.name, "60cm lysimeter", machine.location):
+        if data.l60=="start" and Handlers.send_sample_start_email(machine.name, "60cm lysimeter", machine.location):
+            return jsonify({{"status":"pickup"}})
+        elif data.l60=="end" and Handlers.send_sample_end_email(machine.name, "60cm lysimeter", machine.location):
             return jsonify({{"status":"pickup"}})
         else:
             return jsonify({"status":"error", "msg":"Failed to send email"}), 500
