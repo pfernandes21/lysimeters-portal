@@ -307,6 +307,8 @@ def reading():
             return jsonify({{"status":"pickup"}})
         elif data.l20=="end" and Handlers.send_sample_end_email(machine.name, "20cm lysimeter", machine.location):
             return jsonify({{"status":"pickup"}})
+        elif data.l20=="error" and Handlers.send_sample_error_email(machine.name, "20cm lysimeter", machine.location):
+            return jsonify({{"status":"pickup"}})
         else:
             return jsonify({"status":"error", "msg":"Failed to send email"}), 500
 
@@ -319,6 +321,8 @@ def reading():
             return jsonify({{"status":"pickup"}})
         elif data.l40=="end" and Handlers.send_sample_end_email(machine.name, "40cm lysimeter", machine.location):
             return jsonify({{"status":"pickup"}})
+        elif data.l40=="error" and Handlers.send_sample_error_email(machine.name, "40cm lysimeter", machine.location):
+            return jsonify({{"status":"pickup"}})
         else:
             return jsonify({"status":"error", "msg":"Failed to send email"}), 500
     
@@ -330,6 +334,8 @@ def reading():
         if data.l60=="start" and Handlers.send_sample_start_email(machine.name, "60cm lysimeter", machine.location):
             return jsonify({{"status":"pickup"}})
         elif data.l60=="end" and Handlers.send_sample_end_email(machine.name, "60cm lysimeter", machine.location):
+            return jsonify({{"status":"pickup"}})
+        elif data.l60=="error" and Handlers.send_sample_error_email(machine.name, "60cm lysimeter", machine.location):
             return jsonify({{"status":"pickup"}})
         else:
             return jsonify({"status":"error", "msg":"Failed to send email"}), 500

@@ -167,13 +167,13 @@ void pressurizeValve(int valvePin)
     lysimeters[lysimeterIndex] = Broken;
     digitalWrite(valvePin, LOW);
     if(lysimeterIndex == 0) {
-     send_msg(",\"l20\":\"true\"", 0); 
+     send_msg(",\"l20\":\"error\"", 0); 
     }
     else if(lysimeterIndex == 0) {
-     send_msg(",\"l40\":\"true\"", 0); 
+     send_msg(",\"l40\":\"error\"", 0); 
     }
     else if(lysimeterIndex == 0) {
-     send_msg(",\"l60\":\"true\"", 0); 
+     send_msg(",\"l60\":\"error\"", 0); 
     }
   }
   else {
@@ -303,6 +303,22 @@ void loop()
       send_msg(",\"l20\":\"end\"", 0);
       send_msg(",\"l40\":\"end\"", 0);
       send_msg(",\"l60\":\"end\"", 0);
+      delay(10000);
+    }
+    //sleep indefinitely
+    else
+    {
+      hibernate(RTC.get() + 7 * 24 * 60 * 60);
+    }
+  }
+  else if (lysimeters[0] == Broken && lysimeters[1] == Broken && lysimeters[2] == Broken)
+  {
+    //if pickup not confirmed send warning
+    if (!pickupMsgSent)
+    {
+      send_msg(",\"l20\":\"error\"", 0);
+      send_msg(",\"l40\":\"error\"", 0);
+      send_msg(",\"l60\":\"error\"", 0);
       delay(10000);
     }
     //sleep indefinitely
