@@ -1,13 +1,11 @@
 from flask import render_template, flash, redirect, url_for, request, jsonify, send_file, abort
 from flask_login import current_user, login_user, logout_user, login_required
-from flask_mail import Message
 from werkzeug.urls import url_parse
-from app import app, csrf, mail
+from app import app, csrf
 from app.forms import LoginForm, MachineForm, LocationForm, UserForm, SoilForm
 from app.finders import Finders
 from app.handlers import Handlers
 import json
-import csv
 from types import SimpleNamespace
 from datetime import datetime
 
@@ -165,6 +163,19 @@ def create_soil():
 
     return render_template("create_form.html", title="Create Soil", form=form)
 
+@app.route("/soil/<string:soil_id>/delete", methods=["POST"])
+@login_required
+def delete_soil(soil_id):
+    soil = Finders.get_soil_by_id(soil_id)
+    if soil is None:
+        flash("Cant find soil")
+        return redirect(url_for("soils"))
+
+    if not Handlers.delete_soil(soil):
+        flash("Failed to delete soil")
+        
+    return redirect(url_for("soils"))
+
 @app.route("/machine", methods=["GET", "POST"])
 @login_required
 def create_machine():
@@ -187,7 +198,7 @@ def create_machine():
             flash("Machine already exists")
             return redirect(url_for("locations"))
 
-        machine = Handlers.create_machine(name, location_id, form.soil_id.data)
+        machine = Handlers.create_machine(name, location_id, form.soil20_id.data, form.soil40_id.data, form.soil60_id.data)
         if machine is None:
             form.location_id = location_id
             flash("Failed to create machine")
@@ -209,12 +220,16 @@ def edit_machine(machine_id):
         return redirect(url_for("locations"))
 
     if request.method == "GET":
-        form = MachineForm(location_id=machine.location_id, name=machine.name, soil_id=machine.soil_id, master=machine.is_master())
+        form = MachineForm(location_id=machine.location_id, name=machine.name, soil20_id=machine.soil20_id, soil40_id=machine.soil40_id, soil60_id=machine.soil60_id, master=machine.is_master())
     elif request.method == "POST":
         form = MachineForm()
 
     if form.validate_on_submit():
-        machine = Handlers.update_machine(machine, name=form.name.data, location_id=form.location_id.data, soil_id=form.soil_id.data, updating=True)
+        machine = Handlers.update_machine(machine, name=form.name.data, location_id=form.location_id.data, \
+                                soil20_id=form.soil20_id.data, soil40_id=form.soil40_id.data, soil60_id=form.soil60_id.data, \
+                                updating20=int(form.soil20_id.data)!=machine.soil20_id or machine.updating20, \
+                                updating40=int(form.soil40_id.data)!=machine.soil40_id or machine.updating40, \
+                                updating60=int(form.soil60_id.data)!=machine.soil60_id or machine.updating60)
         return redirect(url_for("location", location_id=machine.location_id))
 
     return render_template("create_form.html", title="Edit Machine", form=form)
@@ -263,27 +278,32 @@ def machine_csv(machine_id):
 @csrf.exempt
 def reading():
     api_key = request.headers.get("Authorization", None)
-    if api_key is None or api_key != "Bearer " + app.config.MACHINE_API_TOKEN:
-        return jsonify({"status":"error", "msg":"Unauthorized"}), 401
+    if api_key is None or api_key != "Bearer " + app.config['MACHINE_API_TOKEN']:
+        return jsonify({"status":"error"}), 401
 
     try:
         data = request.get_json()["data"]
         data = json.loads(data, object_hook=lambda d: SimpleNamespace(**d))
-    except:
-        return jsonify({"status":"error", "msg":"Wrong format"}), 500    
+    except Exception as e:
+        print(e)
+        return jsonify({"status":"error"}), 500    
 
     try:
-        id = data.i
-        time = data.t
+        id = data.id
+        msg_id = data.msg
     except AttributeError:
-        return jsonify({"status":"error", "msg":"Missing info"}), 500
+        print(data)
+        return jsonify({"status":"error"}), 500
 
     # if(not Handlers.check_time_hash(time.lower())):
-    #     return jsonify({"status":"error", "msg":"Wrong info"}), 401
+    #     return jsonify({"status":"error"}), 401
+
+    if(Finders.get_reading_by_msg_id(msg_id)):
+        return jsonify({"status":"ack"}) 
 
     machine = Finders.get_machine_by_id(id)
     if not machine:
-        return jsonify({"status":"error", "msg":"Device not registered"}), 404
+        return jsonify({"status":"error"}), 404
 
     last = Finders.get_last_reading_from_machine_id(id)
 
@@ -293,86 +313,94 @@ def reading():
     pressure = getattr(data, "p", None)
 
     if None in [humidity_20, humidity_40, humidity_60, pressure]:
-        return jsonify({"status":"error", "msg":"Missing data"}), 500
+        return jsonify({"status":"error"}), 500
 
-    if hasattr(data, "config"):
-        machine = Handlers.update_machine(machine, updated=False)
-    
     if hasattr(data, "l20"):
-        Handlers.create_reading(machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+        Handlers.create_reading(msg_id=msg_id, machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
             motor_20=(data.l20=="start"), motor_40=last.motor_40, motor_60=last.motor_60, \
             water_level_20=(data.l20=="end"), water_level_40=last.water_level_40, water_level_60=last.water_level_60)
         
         if data.l20=="start" and Handlers.send_sample_start_email(machine.name, "20cm lysimeter", machine.location):
-            return jsonify({{"status":"pickup"}})
+            return jsonify({"status":"pickup"})
         elif data.l20=="end" and Handlers.send_sample_end_email(machine.name, "20cm lysimeter", machine.location):
-            return jsonify({{"status":"pickup"}})
+            return jsonify({"status":"pickup"})
         elif data.l20=="error" and Handlers.send_sample_error_email(machine.name, "20cm lysimeter", machine.location):
-            return jsonify({{"status":"pickup"}})
+            return jsonify({"status":"pickup"})
         else:
-            return jsonify({"status":"error", "msg":"Failed to send email"}), 500
+            return jsonify({"status":"error"}), 500
 
     elif hasattr(data, "l40"):
-        Handlers.create_reading(machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+        Handlers.create_reading(msg_id=msg_id, machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
             motor_40=(data.l40=="start"), motor_20=last.motor_20, motor_60=last.motor_60, \
             water_level_40=(data.l40=="end"), water_level_20=last.water_level_20, water_level_60=last.water_level_60)
         
         if data.l40=="start" and Handlers.send_sample_start_email(machine.name, "40cm lysimeter", machine.location):
-            return jsonify({{"status":"pickup"}})
+            return jsonify({"status":"pickup"})
         elif data.l40=="end" and Handlers.send_sample_end_email(machine.name, "40cm lysimeter", machine.location):
-            return jsonify({{"status":"pickup"}})
+            return jsonify({"status":"pickup"})
         elif data.l40=="error" and Handlers.send_sample_error_email(machine.name, "40cm lysimeter", machine.location):
-            return jsonify({{"status":"pickup"}})
+            return jsonify({"status":"pickup"})
         else:
-            return jsonify({"status":"error", "msg":"Failed to send email"}), 500
+            return jsonify({"status":"error"}), 500
     
     elif hasattr(data, "l60"):
-        Handlers.create_reading(machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+        Handlers.create_reading(msg_id=msg_id, machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
             motor_60=(data.l60=="start"), motor_40=last.motor_40, motor_20=last.motor_20, \
             water_level_60=(data.l60=="end"), water_level_40=last.water_level_40, water_level_20=last.water_level_20)
         
         if data.l60=="start" and Handlers.send_sample_start_email(machine.name, "60cm lysimeter", machine.location):
-            return jsonify({{"status":"pickup"}})
+            return jsonify({"status":"pickup"})
         elif data.l60=="end" and Handlers.send_sample_end_email(machine.name, "60cm lysimeter", machine.location):
-            return jsonify({{"status":"pickup"}})
+            return jsonify({"status":"pickup"})
         elif data.l60=="error" and Handlers.send_sample_error_email(machine.name, "60cm lysimeter", machine.location):
-            return jsonify({{"status":"pickup"}})
+            return jsonify({"status":"pickup"})
         else:
-            return jsonify({"status":"error", "msg":"Failed to send email"}), 500
+            return jsonify({"status":"error"}), 500
 
     elif hasattr(data, "b"):
-        Handlers.create_reading(machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
-            motor_60=(data.l60=="start"), motor_40=last.motor_40, motor_20=last.motor_20, \
-            water_level_60=(data.l60=="end"), water_level_40=last.water_level_40, water_level_20=last.water_level_20)
-        
+        Handlers.create_reading(msg_id=msg_id, machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+            motor_20=last.motor_20, motor_40=last.motor_40, motor_60=last.motor_60, \
+            water_level_20=last.water_level_20, water_level_40=last.water_level_40, water_level_60=last.water_level_60)
+
         if Handlers.send_battery_email(machine.name, machine.location):
-            return jsonify({{"status":"pickup"}})
+            return jsonify({"status":"pickup"})
         else:
-            return jsonify({"status":"error", "msg":"Failed to send email"}), 500
+            return jsonify({"status":"error"}), 500
 
     else:
         if hasattr(data, "init"):
-            Handlers.create_reading(machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+            Handlers.create_reading(msg_id=msg_id, machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
                 motor_20=False, motor_40=False, motor_60=False, \
                 water_level_20=False, water_level_40=False, water_level_60=False)
         else:
             if last is None:
-                Handlers.create_reading(machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+                Handlers.create_reading(msg_id=msg_id, machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
                     motor_20=False, motor_40=False, motor_60=False, \
                     water_level_20=False, water_level_40=False, water_level_60=False)
 
             try:
-                Handlers.create_reading(machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+                Handlers.create_reading(msg_id=msg_id, machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
                     motor_20=last.motor_20, motor_40=last.motor_40, motor_60=last.motor_60, \
                     water_level_20=last.water_level_20, water_level_40=last.water_level_40, water_level_60=last.water_level_60)
             except:
-                return jsonify({"status":"error", "msg":"Failed to set values"}), 500
+                return jsonify({"status":"error"}), 500
 
-        if machine.updated:
-            return jsonify({"status":"config", "level":machine.soil.humidity_level})
+        if hasattr(data, "config20"):
+            Handlers.update_machine(machine, updating20=False)
+        elif hasattr(data, "config40"):
+            Handlers.update_machine(machine, updating40=False) 
+        elif hasattr(data, "config60"):
+            Handlers.update_machine(machine, updating60=False) 
+        elif machine.updating20:
+            return jsonify({"status":"config20", "level":machine.soil20.humidity_level})
+        elif machine.updating40:
+            return jsonify({"status":"config40", "level":machine.soil40.humidity_level})
+        elif machine.updating60:
+            return jsonify({"status":"config60", "level":machine.soil60.humidity_level})
 
         rain_time = Handlers.get_rain_time(machine.location)
         if rain_time is None:
-            return jsonify({"status":"error", "msg":"Failed to fetch weather"}), 500
+            return jsonify({"status":"error"}), 500
         else:
-            return jsonify({"status":"ok", "wake":rain_time.timestamp})
+            #return jsonify({"status":"ok", "wake":int(rain_time.timestamp())})
+            return jsonify({"status":"ok", "wake":int(datetime.now().timestamp()) + 90})

@@ -1,55 +1,59 @@
-from app.models import User, Location, Machine, Reading, Soil
+from app.models import Users, Locations, Machines, Readings, Soils
 
 class Finders():
 
     @classmethod
     def get_user_from_id(cls, id):
-        return User.query.filter_by(id=id).first()
+        return Users.query.filter_by(id=id).first()
 
     @classmethod
     def get_user_from_username(cls, username):
-        return User.query.filter_by(username=username).first()
+        return Users.query.filter_by(username=username).first()
 
     @classmethod
     def get_user_from_email(cls, email):
-        return User.query.filter_by(email=email).first()
+        return Users.query.filter_by(email=email).first()
 
     @classmethod
     def get_users(cls):
-        return User.query.all()
+        return Users.query.all()
 
     @classmethod
     def get_locations(cls):
-        return Location.query.all()
+        return Locations.query.all()
 
     @classmethod
     def get_location_by_id(cls, id):
-        return Location.query.filter_by(id=id).first()
+        return Locations.query.filter_by(id=id).first()
 
     @classmethod
     def get_location_by_name(cls, name):
-        return Location.query.filter_by(name=name).first()
+        return Locations.query.filter_by(name=name).first()
 
     @classmethod
     def get_soils(cls):
-        return Soil.query.all()
+        return Soils.query.all()
 
     @classmethod
     def get_soil_by_id(cls, id):
-        return Soil.query.filter_by(id=id).first()
+        return Soils.query.filter_by(id=id).first()
 
     @classmethod
     def get_soil_by_name(cls, name):
-        return Soil.query.filter_by(name=name).first()
+        return Soils.query.filter_by(name=name).first()
 
     @classmethod
     def get_machine_by_id(cls, id):
-        return Machine.query.filter_by(id=id).first()
+        return Machines.query.filter_by(id=id).first()
 
     @classmethod
     def get_machine_by_name(cls, name):
-        return Machine.query.filter_by(name=name).first()
+        return Machines.query.filter_by(name=name).first()
+
+    @classmethod
+    def get_reading_by_msg_id(cls, msg_id):
+        return Readings.query.filter_by(msg_id=msg_id).first()
 
     @classmethod
     def get_last_reading_from_machine_id(cls, id):
-        return Reading.query.filter_by(machine_id=id).order_by(Reading.created_at.desc()).first()
+        return Readings.query.filter_by(machine_id=id).order_by(Readings.created_at.desc()).first()

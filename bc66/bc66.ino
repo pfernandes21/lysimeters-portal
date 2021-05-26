@@ -11,7 +11,7 @@ void callback_response(CoapPacket &packet, IPAddress ip, int port) {
   char p[packet.payloadlen + 1];
   memcpy(p, packet.payload, packet.payloadlen);
   p[packet.payloadlen] = NULL;
-  Serial.print(p);
+  Serial.println(p);
   msg = "";
 }
 

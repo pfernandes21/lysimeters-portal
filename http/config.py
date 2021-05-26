@@ -5,8 +5,11 @@ class Config(object):
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or ('sqlite:///' + os.path.join(basedir, 'app.db'))
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    TEMPLATES_AUTO_RELOAD=True
-    SESSION_COOKIE_SECURE=False
+    TEMPLATES_AUTO_RELOAD = True
+    SESSION_COOKIE_SECURE = False
+
+    MACHINE_API_TOKEN = os.environ.get('MACHINE_API_TOKEN') or "ola"
+    OPEN_WEATHER_KEY = os.environ.get('OPEN_WEATHER_KEY') or "ole"
    
     MAIL_SERVER = os.environ.get('MAIL_SERVER')
     MAIL_PORT = int(os.environ.get('MAIL_PORT') or 25)

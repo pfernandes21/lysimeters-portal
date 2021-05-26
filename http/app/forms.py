@@ -24,7 +24,9 @@ class LocationForm(FlaskForm):
 class MachineForm(FlaskForm):
     location_id = HiddenField()
     name = StringField('Name', validators=[DataRequired()])
-    soil_id = SelectField('Soil', choices=[(soil.id,soil.name) for soil in Finders.get_soils()])
+    soil20_id = SelectField('Soil 20cm', choices=[(soil.id,soil.name) for soil in Finders.get_soils()])
+    soil40_id = SelectField('Soil 40cm', choices=[(soil.id,soil.name) for soil in Finders.get_soils()])
+    soil60_id = SelectField('Soil 60cm', choices=[(soil.id,soil.name) for soil in Finders.get_soils()])
     master = BooleanField('Master')
     submit = SubmitField('Add Machine')
 

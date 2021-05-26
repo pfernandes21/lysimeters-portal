@@ -1,18 +1,19 @@
-from app.models import User, Location, Machine, Reading, Soil
-from app import app, db, mail
+from app.models import Users, Locations, Machines, Readings, Soils
+from app import app, mail
 from app.finders import Finders
 import hashlib
 import random
 import string
 import csv
 from datetime import datetime, timedelta
+import requests
 
 class Handlers():
 
     @classmethod
     def create_user(cls, username, email):
         try:
-            user = User(username=username, email=email)
+            user = Users(username=username, email=email)
             password = cls.generate_secret()
             user.set_password(password)
             user.save()
@@ -34,11 +35,11 @@ class Handlers():
 
     @classmethod
     def update_user(cls, user, **kwargs):
-        return User.update(user, **kwargs)
+        return Users.update(user, **kwargs)
 
     @classmethod
     def delete_user(cls, user):
-        return User.delete(user)
+        return Users.delete(user)
 
     @classmethod
     def generate_secret(cls, length=16):
@@ -46,47 +47,47 @@ class Handlers():
 
     @classmethod
     def create_location(cls, name, latitude, longitude):
-        return Location.create(name=name, latitude=latitude, longitude=longitude)
+        return Locations.create(name=name, latitude=latitude, longitude=longitude)
 
     @classmethod
     def update_location(cls, location, **kwargs):
-        return Location.update(location, **kwargs)
+        return Locations.update(location, **kwargs)
 
     @classmethod
     def delete_location(cls, location):
-        Location.delete(location)
+        Locations.delete(location)
 
     @classmethod
-    def create_machine(cls, name, location_id, soil_id):
-        return Machine.create(name=name, location_id=location_id, soil_id=soil_id)
+    def create_machine(cls, name, location_id, soil20_id, soil40_id, soil60_id):
+        return Machines.create(name=name, location_id=location_id, soil20_id=soil20_id, soil40_id=soil40_id, soil60_id=soil60_id)
 
     @classmethod
     def update_machine(cls, machine, **kwargs):
-        return Machine.update(machine, **kwargs)
+        return Machines.update(machine, **kwargs)
 
     @classmethod
     def delete_machine(cls, machine):
-        return Machine.delete(machine)
+        return Machines.delete(machine)
 
     @classmethod
     def create_soil(cls, name, humidity_level):
-        return Soil.create(name=name, humidity_level=humidity_level)
+        return Soils.create(name=name, humidity_level=humidity_level)
 
     @classmethod
     def update_soil(cls, soil, **kwargs):
-        return Soil.update(soil, **kwargs)
+        return Soils.update(soil, **kwargs)
 
     @classmethod
     def delete_soil(cls, soil):
-        return Soil.delete(soil)   
+        return Soils.delete(soil)   
 
     @classmethod
     def create_reading(cls, **kwargs):
-        return Reading.create(**kwargs)
+        return Readings.create(**kwargs)
 
     @classmethod
     def delete_reading(cls, reading):
-        return Reading.delete(reading)
+        return Readings.delete(reading)
 
     @classmethod
     def check_time_hash(cls, time):
@@ -109,7 +110,7 @@ class Handlers():
 
     @classmethod
     def get_rain_time(cls, location):
-        params = {"appid":app.config.OPEN_WEATHER_KEY, "exclude":"minutely,daily,current", "lat":location.latitude, "lon":location.longitude}
+        params = {"appid":app.config['OPEN_WEATHER_KEY'], "exclude":"minutely,daily,current", "lat":location.latitude, "lon":location.longitude}
         try:
             weather = requests.get("https://api.openweathermap.org/data/2.5/onecall", params=params)
             hourlyWeather = weather.json()["hourly"]
@@ -180,8 +181,8 @@ class Handlers():
             outfile = open(app.config.CSV_FILE_PATH, 'w')
             outcsv = csv.writer(outfile)
             records = machine.readings
-            outcsv.writerow([column.name for column in Reading.__mapper__.columns])
-            [outcsv.writerow([getattr(curr, column.name) for column in Reading.__mapper__.columns]) for curr in records]
+            outcsv.writerow([column.name for column in Readings.__mapper__.columns])
+            [outcsv.writerow([getattr(curr, column.name) for column in Readings.__mapper__.columns]) for curr in records]
             return True
         except:
             return False

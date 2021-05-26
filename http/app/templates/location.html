@@ -15,9 +15,17 @@
 
             <th class="th-sm">Master</th>
 
-            <th class="th-sm">Soil</th>
+            <th class="th-sm">Soil 20cm</th>
 
-            <th class="th-sm">Updating</th>
+            <th class="th-sm">Soil 40cm</th>
+
+            <th class="th-sm">Soil 60cm</th>
+
+            <th class="th-sm">Updating 20cm</th>
+
+            <th class="th-sm">Updating 40cm</th>
+
+            <th class="th-sm">Updating 60cm</th>
 
             <th class="th-sm">Created At</th>
 
@@ -29,8 +37,12 @@
         <tr>
             <td>{{ machine.name }}</td>
             <td>{{ machine.id|int() == location.master_id|int() }}</td>
-            <td>{{ machine.soil.name }}</td>
-            <td>{{ machine.updating }}</td>
+            <td>{{ machine.soil20.name }}</td>
+            <td>{{ machine.soil40.name }}</td>
+            <td>{{ machine.soil60.name }}</td>
+            <td>{{ machine.updating20 }}</td>
+            <td>{{ machine.updating40 }}</td>
+            <td>{{ machine.updating60 }}</td>
             <td>{{ machine.created_at }}</td>
             <td>{{ machine.updated_at }}</td>
             <td style="display: flex; justify-content: space-evenly;">

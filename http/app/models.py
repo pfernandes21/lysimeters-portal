@@ -6,7 +6,7 @@ from flask_login import UserMixin
 
 @login.user_loader
 def load_user(id):
-    return User.query.get(int(id))
+    return Users.query.get(int(id))
 
 class ModelMixin():
     id = db.Column(db.Integer, primary_key=True)
@@ -136,7 +136,9 @@ class ModelMixin():
         else:
             return self
 
-class User(db.Model, ModelMixin, UserMixin):
+class Users(db.Model, ModelMixin, UserMixin):
+    __tablename__ = 'users'
+
     username = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
     password_hash = db.Column(db.String(128))
@@ -150,7 +152,9 @@ class User(db.Model, ModelMixin, UserMixin):
     def __repr__(self):
         return '<User {}>'.format(self.username)
 
-class Location(db.Model, ModelMixin):
+class Locations(db.Model, ModelMixin):
+    __tablename__ = 'locations'
+
     name = db.Column(db.String(100), index=True, unique=True)
     status = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -158,19 +162,36 @@ class Location(db.Model, ModelMixin):
     latitude = db.Column(db.String(20))
     longitude = db.Column(db.String(20))
     master_id = db.Column(db.Integer)
-    machines = db.relationship("Machine", back_populates="location")
+    machines = db.relationship("Machines", back_populates="location")
 
     def __repr__(self):
         return '<Location {}>'.format(self.name)
 
-class Machine(db.Model, ModelMixin):
+class Soils(db.Model, ModelMixin):
+    __tablename__ = 'soils'
+
     name = db.Column(db.String(64), index=True, unique=True)
-    location_id = db.Column(db.Integer, db.ForeignKey('location.id'))
-    location = db.relationship("Location", back_populates="machines")
-    soil_id = db.Column(db.Integer, db.ForeignKey('soil.id'))
-    soil = db.relationship("Soil")
-    readings = db.relationship("Reading", back_populates="machine")
-    updating = db.Column(db.Boolean, default=False)
+    humidity_level = db.Column(db.Integer)
+
+    def __repr__(self):
+        return '<Name {}, Humidity Level {}>'.format(self.name, self.humidity_level)
+
+class Machines(db.Model, ModelMixin):
+    __tablename__ = 'machines'
+
+    name = db.Column(db.String(64), index=True, unique=True)
+    location_id = db.Column(db.Integer, db.ForeignKey('locations.id'))
+    location = db.relationship("Locations", back_populates="machines")
+    soil20_id = db.Column(db.Integer, db.ForeignKey('soils.id'))
+    soil20 = db.relationship("Soils", foreign_keys=soil20_id)
+    soil40_id = db.Column(db.Integer, db.ForeignKey('soils.id'))
+    soil40 = db.relationship("Soils", foreign_keys=soil40_id)
+    soil60_id = db.Column(db.Integer, db.ForeignKey('soils.id'))
+    soil60 = db.relationship("Soils", foreign_keys=soil60_id)
+    readings = db.relationship("Readings", back_populates="machine")
+    updating20 = db.Column(db.Boolean, default=False)
+    updating40 = db.Column(db.Boolean, default=False)
+    updating60 = db.Column(db.Boolean, default=False)
 
     def is_master(self):
         return self.id == self.location.master_id
@@ -178,17 +199,13 @@ class Machine(db.Model, ModelMixin):
     def __repr__(self):
         return '<Machine {}, Location {}>'.format(self.id, self.location.name)
 
-class Soil(db.Model, ModelMixin):
-    name = db.Column(db.String(64), index=True, unique=True)
-    humidity_level = db.Column(db.Integer)
+class Readings(db.Model, ModelMixin):
+    __tablename__ = 'readings'
 
-    def __repr__(self):
-        return '<Name {}, Humidity Level {}>'.format(self.name, self.humidity_level)
-
-class Reading(db.Model, ModelMixin):
+    msg_id = db.Column(db.Integer, index=True, unique=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    machine_id = db.Column(db.Integer, db.ForeignKey('machine.id'))
-    machine = db.relationship("Machine", back_populates="readings")
+    machine_id = db.Column(db.Integer, db.ForeignKey('machines.id'))
+    machine = db.relationship("Machines", back_populates="readings")
     motor_20 = db.Column(db.Boolean, default=False)
     motor_40 = db.Column(db.Boolean, default=False)
     motor_60 = db.Column(db.Boolean, default=False)

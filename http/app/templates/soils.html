@@ -20,6 +20,12 @@
         <tr>
             <td>{{ soil.name }}</td>
             <td>{{ soil.humidity_level }}</td>
+            <td style="display: flex; justify-content: space-evenly;">
+                <form action="/soil/{{ soil.id }}/delete" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button type="submit">Delete</button>
+                </form>
+            </td>
         </tr>
         {% endfor %}
     </tbody>

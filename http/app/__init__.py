@@ -12,7 +12,7 @@ app = Flask(__name__)
 app.config.from_object(Config)
 
 db = SQLAlchemy(app)
-migrate = Migrate(app, db, render_as_batch=True)
+migrate = Migrate(app, db)
 
 login = LoginManager(app)
 login.login_view = 'login'
@@ -24,7 +24,7 @@ mail = Mail(app)
 
 app.config.CSV_FILE_PATH = os.path.abspath(os.path.dirname(__file__) + '/files/data.csv')
 
-from app import routes, models
+from app import models, routes
 
 from app.handlers import Handlers
 import click
