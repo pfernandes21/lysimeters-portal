@@ -58,8 +58,8 @@ class Handlers():
         Locations.delete(location)
 
     @classmethod
-    def create_machine(cls, name, location_id, soil20_id, soil40_id, soil60_id):
-        return Machines.create(name=name, location_id=location_id, soil20_id=soil20_id, soil40_id=soil40_id, soil60_id=soil60_id)
+    def create_machine(cls, name, location_id, soil_20_id, soil_40_id, soil_60_id):
+        return Machines.create(name=name, location_id=location_id, soil_20_id=soil_20_id, soil_40_id=soil_40_id, soil_60_id=soil_60_id)
 
     @classmethod
     def update_machine(cls, machine, **kwargs):

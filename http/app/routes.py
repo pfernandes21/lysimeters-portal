@@ -5,6 +5,7 @@ from app import app, csrf
 from app.forms import LoginForm, MachineForm, LocationForm, UserForm, SoilForm
 from app.finders import Finders
 from app.handlers import Handlers
+from app.values import LocationsValue
 import json
 from types import SimpleNamespace
 from datetime import datetime
@@ -198,7 +199,7 @@ def create_machine():
             flash("Machine already exists")
             return redirect(url_for("locations"))
 
-        machine = Handlers.create_machine(name, location_id, form.soil20_id.data, form.soil40_id.data, form.soil60_id.data)
+        machine = Handlers.create_machine(name, location_id, form.soil_20_id.data, form.soil_40_id.data, form.soil_60_id.data)
         if machine is None:
             form.location_id = location_id
             flash("Failed to create machine")
@@ -220,16 +221,16 @@ def edit_machine(machine_id):
         return redirect(url_for("locations"))
 
     if request.method == "GET":
-        form = MachineForm(location_id=machine.location_id, name=machine.name, soil20_id=machine.soil20_id, soil40_id=machine.soil40_id, soil60_id=machine.soil60_id, master=machine.is_master())
+        form = MachineForm(location_id=machine.location_id, name=machine.name, soil_20_id=machine.soil_20_id, soil_40_id=machine.soil_40_id, soil_60_id=machine.soil_60_id, master=machine.is_master())
     elif request.method == "POST":
         form = MachineForm()
 
     if form.validate_on_submit():
         machine = Handlers.update_machine(machine, name=form.name.data, location_id=form.location_id.data, \
-                                soil20_id=form.soil20_id.data, soil40_id=form.soil40_id.data, soil60_id=form.soil60_id.data, \
-                                updating20=int(form.soil20_id.data)!=machine.soil20_id or machine.updating20, \
-                                updating40=int(form.soil40_id.data)!=machine.soil40_id or machine.updating40, \
-                                updating60=int(form.soil60_id.data)!=machine.soil60_id or machine.updating60)
+                                soil_20_id=form.soil_20_id.data, soil_40_id=form.soil_40_id.data, soil_60_id=form.soil_60_id.data, \
+                                updating_20=int(form.soil_20_id.data)!=machine.soil_20_id or machine.updating_20, \
+                                updating_40=int(form.soil_40_id.data)!=machine.soil_40_id or machine.updating_40, \
+                                updating_60=int(form.soil_60_id.data)!=machine.soil_60_id or machine.updating_60)
         return redirect(url_for("location", location_id=machine.location_id))
 
     return render_template("create_form.html", title="Edit Machine", form=form)
@@ -273,6 +274,13 @@ def machine_csv(machine_id):
         return send_file(app.config.CSV_FILE_PATH, as_attachment=True)
     except FileNotFoundError:
         abort(404)
+
+@app.route("/api/locations", methods=["GET"])
+@csrf.exempt
+@login_required
+def locations_api():
+    locations = Finders.get_locations()
+    return LocationsValue(locations).json()
 
 @app.route("/api/reading", methods=["POST"])
 @csrf.exempt
@@ -386,17 +394,17 @@ def reading():
                 return jsonify({"status":"error"}), 500
 
         if hasattr(data, "config20"):
-            Handlers.update_machine(machine, updating20=False)
+            Handlers.update_machine(machine, updating_20=False)
         elif hasattr(data, "config40"):
-            Handlers.update_machine(machine, updating40=False) 
+            Handlers.update_machine(machine, updating_40=False) 
         elif hasattr(data, "config60"):
-            Handlers.update_machine(machine, updating60=False) 
-        elif machine.updating20:
-            return jsonify({"status":"config20", "level":machine.soil20.humidity_level})
-        elif machine.updating40:
-            return jsonify({"status":"config40", "level":machine.soil40.humidity_level})
-        elif machine.updating60:
-            return jsonify({"status":"config60", "level":machine.soil60.humidity_level})
+            Handlers.update_machine(machine, updating_60=False) 
+        elif machine.updating_20:
+            return jsonify({"status":"config20", "level":machine.soil_20.humidity_level})
+        elif machine.updating_40:
+            return jsonify({"status":"config40", "level":machine.soil_40.humidity_level})
+        elif machine.updating_60:
+            return jsonify({"status":"config60", "level":machine.soil_60.humidity_level})
 
         rain_time = Handlers.get_rain_time(machine.location)
         if rain_time is None:

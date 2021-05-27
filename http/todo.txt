@@ -1,4 +1,5 @@
 add observacoes to machine/locais
 material list
 api
-configurar humidade de acordo com o tipo de solo
+cronjob checkar a vitalidade das maquinas
+pensar na arquitetura do master/slave - substituir delay final por slave msg check. ter atençao a sleeps consecutivos
