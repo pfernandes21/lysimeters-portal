@@ -275,12 +275,12 @@ def device_csv(device_id):
     except FileNotFoundError:
         abort(404)
 
-@app.route("/vitality-check", methods=["GET"])
+@app.route("/vitality-check", methods=["POST"])
 @csrf.exempt
 @login_required
 def vitality_check():
     inactive_devices = []
-    for device in Finders.get_devices():
+    for device in Finders.get_active_devices():
         last_reading = Finders.get_device_last_reading(device)
         if last_reading is not None and last_reading.created_at < datetime.now() - timedelta(days=3):
             Handlers.update_device(device, status=False)
