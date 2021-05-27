@@ -156,11 +156,10 @@ class Locations(db.Model, ModelMixin):
     __tablename__ = 'locations'
 
     name = db.Column(db.String(100), index=True, unique=True)
-    status = db.Column(db.Boolean, default=True)
     latitude = db.Column(db.String(20))
     longitude = db.Column(db.String(20))
     master_id = db.Column(db.Integer)
-    machines = db.relationship("Machines", back_populates="location")
+    devices = db.relationship("Devices", back_populates="location")
 
     def __repr__(self):
         return '<Location {}>'.format(self.name)
@@ -174,19 +173,20 @@ class Soils(db.Model, ModelMixin):
     def __repr__(self):
         return '<Name {}, Humidity Level {}>'.format(self.name, self.humidity_level)
 
-class Machines(db.Model, ModelMixin):
-    __tablename__ = 'machines'
+class Devices(db.Model, ModelMixin):
+    __tablename__ = 'devices'
 
     name = db.Column(db.String(64), index=True, unique=True)
+    status = db.Column(db.Boolean, default=True)
     location_id = db.Column(db.Integer, db.ForeignKey('locations.id'))
-    location = db.relationship("Locations", back_populates="machines")
+    location = db.relationship("Locations", back_populates="devices")
     soil_20_id = db.Column(db.Integer, db.ForeignKey('soils.id'))
     soil_20 = db.relationship("Soils", foreign_keys=soil_20_id)
     soil_40_id = db.Column(db.Integer, db.ForeignKey('soils.id'))
     soil_40 = db.relationship("Soils", foreign_keys=soil_40_id)
     soil_60_id = db.Column(db.Integer, db.ForeignKey('soils.id'))
     soil_60 = db.relationship("Soils", foreign_keys=soil_60_id)
-    readings = db.relationship("Readings", back_populates="machine")
+    readings = db.relationship("Readings", back_populates="device")
     updating_20 = db.Column(db.Boolean, default=False)
     updating_40 = db.Column(db.Boolean, default=False)
     updating_60 = db.Column(db.Boolean, default=False)
@@ -195,15 +195,15 @@ class Machines(db.Model, ModelMixin):
         return self.id == self.location.master_id
 
     def __repr__(self):
-        return '<Machine {}, Location {}>'.format(self.id, self.location.name)
+        return '<Device {}, Location {}>'.format(self.id, self.location.name)
 
 class Readings(db.Model, ModelMixin):
     __tablename__ = 'readings'
 
     msg_id = db.Column(db.Integer, index=True, unique=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    machine_id = db.Column(db.Integer, db.ForeignKey('machines.id'))
-    machine = db.relationship("Machines", back_populates="readings")
+    device_id = db.Column(db.Integer, db.ForeignKey('devices.id'))
+    device = db.relationship("Devices", back_populates="readings")
     motor_20 = db.Column(db.Boolean, default=False)
     motor_40 = db.Column(db.Boolean, default=False)
     motor_60 = db.Column(db.Boolean, default=False)
@@ -216,4 +216,4 @@ class Readings(db.Model, ModelMixin):
     water_level_60 = db.Column(db.Boolean, default=False)
 
     def __repr__(self):
-        return '<Reading {}, Machine {}>'.format(self.id, self.machine.id)
+        return '<Reading {}, Device {}>'.format(self.id, self.device.id)

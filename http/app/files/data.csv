@@ -1,4 +1,4 @@
-id,created_at,machine_id,motor_20,motor_40,motor_60,humidity_20,humidity_40,humidity_60,pressure,water_level_20,water_level_40,water_level_60
+id,created_at,device_id,motor_20,motor_40,motor_60,humidity_20,humidity_40,humidity_60,pressure,water_level_20,water_level_40,water_level_60
 1,2021-04-01 10:27:17.542816,1,False,False,False,0.0,237.0,187.0,3.834,False,False,False
 2,2021-04-01 10:27:17.577133,1,False,False,False,3.0,236.0,187.0,3.834,False,False,False
 3,2021-04-01 10:27:22.701308,1,False,False,False,0.0,237.0,192.0,3.834,False,False,False

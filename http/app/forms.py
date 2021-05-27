@@ -21,14 +21,14 @@ class LocationForm(FlaskForm):
     longitude = StringField('Longitude', validators=[DataRequired()])
     submit = SubmitField('Add Location')
 
-class MachineForm(FlaskForm):
+class DeviceForm(FlaskForm):
     location_id = HiddenField()
     name = StringField('Name', validators=[DataRequired()])
     soil_20_id = SelectField('Soil 20cm', choices=[(soil.id,soil.name) for soil in Finders.get_soils()])
     soil_40_id = SelectField('Soil 40cm', choices=[(soil.id,soil.name) for soil in Finders.get_soils()])
     soil_60_id = SelectField('Soil 60cm', choices=[(soil.id,soil.name) for soil in Finders.get_soils()])
     master = BooleanField('Master')
-    submit = SubmitField('Add Machine')
+    submit = SubmitField('Add Device')
 
 class SoilForm(FlaskForm):
     name = StringField('Name', validators=[DataRequired()])

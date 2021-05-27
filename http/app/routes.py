@@ -2,13 +2,13 @@ from flask import render_template, flash, redirect, url_for, request, jsonify, s
 from flask_login import current_user, login_user, logout_user, login_required
 from werkzeug.urls import url_parse
 from app import app, csrf
-from app.forms import LoginForm, MachineForm, LocationForm, UserForm, SoilForm
+from app.forms import LoginForm, DeviceForm, LocationForm, UserForm, SoilForm
 from app.finders import Finders
 from app.handlers import Handlers
-from app.values import LocationsValue
+from app.values import LocationsValue, LocationValue, DeviceValue
 import json
 from types import SimpleNamespace
-from datetime import datetime
+from datetime import datetime, timedelta
 
 @app.route("/health")
 def health():
@@ -129,7 +129,7 @@ def delete_location(location_id):
     
     return redirect(url_for("locations"))
 
-@app.route("/location/<int:location_id>/machines", methods=["GET"])
+@app.route("/location/<int:location_id>/devices", methods=["GET"])
 @login_required
 def location(location_id):
     location = Finders.get_location_by_id(location_id)
@@ -177,15 +177,15 @@ def delete_soil(soil_id):
         
     return redirect(url_for("soils"))
 
-@app.route("/machine", methods=["GET", "POST"])
+@app.route("/device", methods=["GET", "POST"])
 @login_required
-def create_machine():
+def create_device():
     location_id = request.args.get("location_id", None)
 
     if request.method == "GET":
-        form = MachineForm(location_id=location_id)
+        form = DeviceForm(location_id=location_id)
     elif request.method == "POST":
-        form = MachineForm()
+        form = DeviceForm()
 
     if form.validate_on_submit():
         location_id = form.location_id.data
@@ -195,79 +195,79 @@ def create_machine():
             return redirect(url_for("locations"))
 
         name = form.name.data
-        if Finders.get_machine_by_name(name):
-            flash("Machine already exists")
+        if Finders.get_device_by_name(name):
+            flash("Device already exists")
             return redirect(url_for("locations"))
 
-        machine = Handlers.create_machine(name, location_id, form.soil_20_id.data, form.soil_40_id.data, form.soil_60_id.data)
-        if machine is None:
+        device = Handlers.create_device(name, location_id, form.soil_20_id.data, form.soil_40_id.data, form.soil_60_id.data)
+        if device is None:
             form.location_id = location_id
-            flash("Failed to create machine")
-            return render_template("create_form.html", title="Create Machine", form=form)
+            flash("Failed to create device")
+            return render_template("create_form.html", title="Create Device", form=form)
 
         if form.master.data:
-            Handlers.update_location(location, master_id=machine.id)
+            Handlers.update_location(location, master_id=device.id)
 
         return redirect(url_for("location", location_id=location_id))
 
-    return render_template("create_form.html", title="Create Machine", form=form)
+    return render_template("create_form.html", title="Create Device", form=form)
 
-@app.route("/machine/<string:machine_id>/edit", methods=["GET", "POST"])
+@app.route("/device/<string:device_id>/edit", methods=["GET", "POST"])
 @login_required
-def edit_machine(machine_id):
-    machine = Finders.get_machine_by_id(machine_id)
-    if machine is None:
-        flash("Cant find machine")
+def edit_device(device_id):
+    device = Finders.get_device_by_id(device_id)
+    if device is None:
+        flash("Cant find device")
         return redirect(url_for("locations"))
 
     if request.method == "GET":
-        form = MachineForm(location_id=machine.location_id, name=machine.name, soil_20_id=machine.soil_20_id, soil_40_id=machine.soil_40_id, soil_60_id=machine.soil_60_id, master=machine.is_master())
+        form = DeviceForm(location_id=device.location_id, name=device.name, soil_20_id=device.soil_20_id, soil_40_id=device.soil_40_id, soil_60_id=device.soil_60_id, master=device.is_master())
     elif request.method == "POST":
-        form = MachineForm()
+        form = DeviceForm()
 
     if form.validate_on_submit():
-        machine = Handlers.update_machine(machine, name=form.name.data, location_id=form.location_id.data, \
+        device = Handlers.update_device(device, name=form.name.data, location_id=form.location_id.data, \
                                 soil_20_id=form.soil_20_id.data, soil_40_id=form.soil_40_id.data, soil_60_id=form.soil_60_id.data, \
-                                updating_20=int(form.soil_20_id.data)!=machine.soil_20_id or machine.updating_20, \
-                                updating_40=int(form.soil_40_id.data)!=machine.soil_40_id or machine.updating_40, \
-                                updating_60=int(form.soil_60_id.data)!=machine.soil_60_id or machine.updating_60)
-        return redirect(url_for("location", location_id=machine.location_id))
+                                updating_20=int(form.soil_20_id.data)!=device.soil_20_id or device.updating_20, \
+                                updating_40=int(form.soil_40_id.data)!=device.soil_40_id or device.updating_40, \
+                                updating_60=int(form.soil_60_id.data)!=device.soil_60_id or device.updating_60)
+        return redirect(url_for("location", location_id=device.location_id))
 
-    return render_template("create_form.html", title="Edit Machine", form=form)
+    return render_template("create_form.html", title="Edit Device", form=form)
 
-@app.route("/machine/<string:machine_id>/delete", methods=["POST"])
+@app.route("/device/<string:device_id>/delete", methods=["POST"])
 @login_required
-def delete_machine(machine_id):
-    machine = Finders.get_machine_by_id(machine_id)
-    if machine is None:
-        flash("Cant find machine")
+def delete_device(device_id):
+    device = Finders.get_device_by_id(device_id)
+    if device is None:
+        flash("Cant find device")
         return redirect(url_for("locations"))
 
-    location_id = machine.location_id
-    if not Handlers.delete_machine(machine):
-        flash("Failed to delete machine")
+    location_id = device.location_id
+    if not Handlers.delete_device(device):
+        flash("Failed to delete device")
         
     return redirect(url_for("location", location_id=location_id))
 
-@app.route("/machine/<int:machine_id>", methods=["GET"])
+@app.route("/device/<int:device_id>", methods=["GET"])
 @login_required
-def machine(machine_id):
-    machine = Finders.get_machine_by_id(machine_id)
-    if machine is None:
-        flash("Cant find machine")
+def device(device_id):
+    device = Finders.get_device_by_id(device_id)
+    if device is None:
+        flash("Cant find device")
         return redirect(url_for("locations"))
 
-    return render_template("machine.html", title=machine.name, machine=machine)
+    return render_template("device.html", title=device.name, device=device)
 
-@app.route("/machine/<int:machine_id>/csv", methods=["GET"])
+@app.route("/device/<int:device_id>/csv", methods=["GET"])
 @login_required
-def machine_csv(machine_id):
-    machine = Finders.get_machine_by_id(machine_id)
-    if machine is None:
-        flash("Cant find machine")
+def device_csv(device_id):
+    device = Finders.get_device_by_id(device_id)
+    if device is None:
+        flash("Cant find device")
         return redirect(url_for("locations"))
 
-    if not Handlers.get_machine_csv(machine):
+    if not Handlers.get_device_csv(device):
         abort(500)
 
     try:
@@ -275,12 +275,45 @@ def machine_csv(machine_id):
     except FileNotFoundError:
         abort(404)
 
+@app.route("/vitality-check", methods=["GET"])
+@csrf.exempt
+@login_required
+def vitality_check():
+    inactive_devices = []
+    for device in Finders.get_devices():
+        last_reading = Finders.get_device_last_reading(device)
+        if last_reading is not None and last_reading.created_at < datetime.now() - timedelta(days=3):
+            Handlers.update_device(device, status=False)
+            inactive_devices.append(device)
+
+    if len(inactive_devices) > 0:
+        if not Handlers.send_inactive_devices_email(inactive_devices):
+            for device in inactive_devices:
+                Handlers.update_device(device, status=True)
+            return jsonify("Failed"), 500
+    
+    return jsonify("Success")
+
 @app.route("/api/locations", methods=["GET"])
 @csrf.exempt
 @login_required
 def locations_api():
     locations = Finders.get_locations()
     return LocationsValue(locations).json()
+
+@app.route("/api/location/<int:location_id>", methods=["GET"])
+@csrf.exempt
+@login_required
+def location_api(location_id):
+    location = Finders.get_location_by_id(location_id)
+    return LocationValue(location).json()
+
+@app.route("/api/device/<int:device_id>", methods=["GET"])
+@csrf.exempt
+@login_required
+def device_api(device_id):
+    device = Finders.get_device_by_id(device_id)
+    return DeviceValue(device).json()
 
 @app.route("/api/reading", methods=["POST"])
 @csrf.exempt
@@ -293,27 +326,28 @@ def reading():
         data = request.get_json()["data"]
         data = json.loads(data, object_hook=lambda d: SimpleNamespace(**d))
     except Exception as e:
-        print(e)
         return jsonify({"status":"error"}), 500    
 
     try:
         id = data.id
         msg_id = data.msg
     except AttributeError:
-        print(data)
         return jsonify({"status":"error"}), 500
 
-    # if(not Handlers.check_time_hash(time.lower())):
+    # if not Handlers.check_time_hash(time.lower()):
     #     return jsonify({"status":"error"}), 401
 
-    if(Finders.get_reading_by_msg_id(msg_id)):
+    if Finders.get_reading_by_msg_id(msg_id):
         return jsonify({"status":"ack"}) 
 
-    machine = Finders.get_machine_by_id(id)
-    if not machine:
+    device = Finders.get_device_by_id(id)
+    if not device:
         return jsonify({"status":"error"}), 404
 
-    last = Finders.get_last_reading_from_machine_id(id)
+    if not device.status:
+        Handlers.update_device(device, status=True)
+
+    last = Finders.get_last_reading_from_device_id(id)
 
     humidity_20 = getattr(data, "h20", None)
     humidity_40 = getattr(data, "h40", None)
@@ -324,89 +358,89 @@ def reading():
         return jsonify({"status":"error"}), 500
 
     if hasattr(data, "l20"):
-        Handlers.create_reading(msg_id=msg_id, machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+        Handlers.create_reading(msg_id=msg_id, device_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
             motor_20=(data.l20=="start"), motor_40=last.motor_40, motor_60=last.motor_60, \
             water_level_20=(data.l20=="end"), water_level_40=last.water_level_40, water_level_60=last.water_level_60)
         
-        if data.l20=="start" and Handlers.send_sample_start_email(machine.name, "20cm lysimeter", machine.location):
+        if data.l20=="start" and Handlers.send_sample_start_email(device.name, "20cm lysimeter", device.location):
             return jsonify({"status":"pickup"})
-        elif data.l20=="end" and Handlers.send_sample_end_email(machine.name, "20cm lysimeter", machine.location):
+        elif data.l20=="end" and Handlers.send_sample_end_email(device.name, "20cm lysimeter", device.location):
             return jsonify({"status":"pickup"})
-        elif data.l20=="error" and Handlers.send_sample_error_email(machine.name, "20cm lysimeter", machine.location):
+        elif data.l20=="error" and Handlers.send_sample_error_email(device.name, "20cm lysimeter", device.location):
             return jsonify({"status":"pickup"})
         else:
             return jsonify({"status":"error"}), 500
 
     elif hasattr(data, "l40"):
-        Handlers.create_reading(msg_id=msg_id, machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+        Handlers.create_reading(msg_id=msg_id, device_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
             motor_40=(data.l40=="start"), motor_20=last.motor_20, motor_60=last.motor_60, \
             water_level_40=(data.l40=="end"), water_level_20=last.water_level_20, water_level_60=last.water_level_60)
         
-        if data.l40=="start" and Handlers.send_sample_start_email(machine.name, "40cm lysimeter", machine.location):
+        if data.l40=="start" and Handlers.send_sample_start_email(device.name, "40cm lysimeter", device.location):
             return jsonify({"status":"pickup"})
-        elif data.l40=="end" and Handlers.send_sample_end_email(machine.name, "40cm lysimeter", machine.location):
+        elif data.l40=="end" and Handlers.send_sample_end_email(device.name, "40cm lysimeter", device.location):
             return jsonify({"status":"pickup"})
-        elif data.l40=="error" and Handlers.send_sample_error_email(machine.name, "40cm lysimeter", machine.location):
+        elif data.l40=="error" and Handlers.send_sample_error_email(device.name, "40cm lysimeter", device.location):
             return jsonify({"status":"pickup"})
         else:
             return jsonify({"status":"error"}), 500
     
     elif hasattr(data, "l60"):
-        Handlers.create_reading(msg_id=msg_id, machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+        Handlers.create_reading(msg_id=msg_id, device_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
             motor_60=(data.l60=="start"), motor_40=last.motor_40, motor_20=last.motor_20, \
             water_level_60=(data.l60=="end"), water_level_40=last.water_level_40, water_level_20=last.water_level_20)
         
-        if data.l60=="start" and Handlers.send_sample_start_email(machine.name, "60cm lysimeter", machine.location):
+        if data.l60=="start" and Handlers.send_sample_start_email(device.name, "60cm lysimeter", device.location):
             return jsonify({"status":"pickup"})
-        elif data.l60=="end" and Handlers.send_sample_end_email(machine.name, "60cm lysimeter", machine.location):
+        elif data.l60=="end" and Handlers.send_sample_end_email(device.name, "60cm lysimeter", device.location):
             return jsonify({"status":"pickup"})
-        elif data.l60=="error" and Handlers.send_sample_error_email(machine.name, "60cm lysimeter", machine.location):
+        elif data.l60=="error" and Handlers.send_sample_error_email(device.name, "60cm lysimeter", device.location):
             return jsonify({"status":"pickup"})
         else:
             return jsonify({"status":"error"}), 500
 
     elif hasattr(data, "b"):
-        Handlers.create_reading(msg_id=msg_id, machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+        Handlers.create_reading(msg_id=msg_id, device_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
             motor_20=last.motor_20, motor_40=last.motor_40, motor_60=last.motor_60, \
             water_level_20=last.water_level_20, water_level_40=last.water_level_40, water_level_60=last.water_level_60)
 
-        if Handlers.send_battery_email(machine.name, machine.location):
+        if Handlers.send_battery_email(device.name, device.location):
             return jsonify({"status":"pickup"})
         else:
             return jsonify({"status":"error"}), 500
 
     else:
         if hasattr(data, "init"):
-            Handlers.create_reading(msg_id=msg_id, machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+            Handlers.create_reading(msg_id=msg_id, device_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
                 motor_20=False, motor_40=False, motor_60=False, \
                 water_level_20=False, water_level_40=False, water_level_60=False)
         else:
             if last is None:
-                Handlers.create_reading(msg_id=msg_id, machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+                Handlers.create_reading(msg_id=msg_id, device_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
                     motor_20=False, motor_40=False, motor_60=False, \
                     water_level_20=False, water_level_40=False, water_level_60=False)
 
             try:
-                Handlers.create_reading(msg_id=msg_id, machine_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+                Handlers.create_reading(msg_id=msg_id, device_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
                     motor_20=last.motor_20, motor_40=last.motor_40, motor_60=last.motor_60, \
                     water_level_20=last.water_level_20, water_level_40=last.water_level_40, water_level_60=last.water_level_60)
             except:
                 return jsonify({"status":"error"}), 500
 
         if hasattr(data, "config20"):
-            Handlers.update_machine(machine, updating_20=False)
+            Handlers.update_device(device, updating_20=False)
         elif hasattr(data, "config40"):
-            Handlers.update_machine(machine, updating_40=False) 
+            Handlers.update_device(device, updating_40=False) 
         elif hasattr(data, "config60"):
-            Handlers.update_machine(machine, updating_60=False) 
-        elif machine.updating_20:
-            return jsonify({"status":"config20", "level":machine.soil_20.humidity_level})
-        elif machine.updating_40:
-            return jsonify({"status":"config40", "level":machine.soil_40.humidity_level})
-        elif machine.updating_60:
-            return jsonify({"status":"config60", "level":machine.soil_60.humidity_level})
+            Handlers.update_device(device, updating_60=False) 
+        elif device.updating_20:
+            return jsonify({"status":"config20", "level":device.soil_20.humidity_level})
+        elif device.updating_40:
+            return jsonify({"status":"config40", "level":device.soil_40.humidity_level})
+        elif device.updating_60:
+            return jsonify({"status":"config60", "level":device.soil_60.humidity_level})
 
-        rain_time = Handlers.get_rain_time(machine.location)
+        rain_time = Handlers.get_rain_time(device.location)
         if rain_time is None:
             return jsonify({"status":"error"}), 500
         else:

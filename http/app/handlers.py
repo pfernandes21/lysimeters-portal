@@ -1,4 +1,4 @@
-from app.models import Users, Locations, Machines, Readings, Soils
+from app.models import Users, Locations, Devices, Readings, Soils
 from app import app, mail
 from app.finders import Finders
 import hashlib
@@ -58,16 +58,16 @@ class Handlers():
         Locations.delete(location)
 
     @classmethod
-    def create_machine(cls, name, location_id, soil_20_id, soil_40_id, soil_60_id):
-        return Machines.create(name=name, location_id=location_id, soil_20_id=soil_20_id, soil_40_id=soil_40_id, soil_60_id=soil_60_id)
+    def create_device(cls, name, location_id, soil_20_id, soil_40_id, soil_60_id):
+        return Devices.create(name=name, location_id=location_id, soil_20_id=soil_20_id, soil_40_id=soil_40_id, soil_60_id=soil_60_id)
 
     @classmethod
-    def update_machine(cls, machine, **kwargs):
-        return Machines.update(machine, **kwargs)
+    def update_device(cls, device, **kwargs):
+        return Devices.update(device, **kwargs)
 
     @classmethod
-    def delete_machine(cls, machine):
-        return Machines.delete(machine)
+    def delete_device(cls, device):
+        return Devices.delete(device)
 
     @classmethod
     def create_soil(cls, name, humidity_level):
@@ -132,43 +132,39 @@ class Handlers():
         return datetime.now().replace(hour=4, minute=0) + timedelta(days=2)
 
     @classmethod
-    def send_sample_start_email(cls, machine, lysimeter, location):
+    def send_sample_start_email(cls, device, lysimeter, location):
         subject=f"Lysimeters Portal - Sample Collected in {location}"
-        message=f"The {machine} {lysimeter} located in {location} started collecting a sample at {datetime.now().strftime('%d/%m/%Y, %H:%M:%S')}."
-
-        try:
-            mail.send_message(recipients=[user.email for user in Finders.get_users()], html=message, subject=subject)
-            return True
-        except:
-            return False
+        message=f"The {device} {lysimeter} located in {location} started collecting a sample at {datetime.now().strftime('%d/%m/%Y, %H:%M:%S')}."
+        return cls.send_email(subject, message)
 
     @classmethod
-    def send_sample_end_email(cls, machine, lysimeter, location):
+    def send_sample_end_email(cls, device, lysimeter, location):
         subject=f"Lysimeters Portal - Sample Collected in {location}"
-        message=f"The {machine} {lysimeter} located in {location} has collected a sample at {datetime.now().strftime('%d/%m/%Y, %H:%M:%S')}."
-
-        try:
-            mail.send_message(recipients=[user.email for user in Finders.get_users()], html=message, subject=subject)
-            return True
-        except:
-            return False
+        message=f"The {device} {lysimeter} located in {location} has collected a sample at {datetime.now().strftime('%d/%m/%Y, %H:%M:%S')}."
+        return cls.send_email(subject, message)
 
     @classmethod
-    def send_sample_error_email(cls, machine, lysimeter, location):
+    def send_sample_error_email(cls, device, lysimeter, location):
         subject=f"Lysimeters Portal - Sample Collected in {location}"
-        message=f"The {machine} {lysimeter} located in {location} started malfunctioning at {datetime.now().strftime('%d/%m/%Y, %H:%M:%S')}."
-
-        try:
-            mail.send_message(recipients=[user.email for user in Finders.get_users()], html=message, subject=subject)
-            return True
-        except:
-            return False
+        message=f"The {device} {lysimeter} located in {location} started malfunctioning at {datetime.now().strftime('%d/%m/%Y, %H:%M:%S')}."
+        return cls.send_email(subject, message)
 
     @classmethod
-    def send_battery_email(cls, machine, location):
+    def send_battery_email(cls, device, location):
         subject=f"Lysimeters Portal - Low battery device in {location}"
-        message=f"The {machine} located in {location} is low on battery at {datetime.now().strftime('%d/%m/%Y, %H:%M:%S')}."
+        message=f"The {device} located in {location} is low on battery at {datetime.now().strftime('%d/%m/%Y, %H:%M:%S')}."
+        return cls.send_email(subject, message)
 
+    @classmethod
+    def send_inactive_devices_email(cls, devices):
+        subject="Lysimeters Portal - Inactive devices"
+        message="The following devices are inactive:\n"
+        for device in devices:
+            message += f"- {device.name} at {device.location.name}\n"
+        return cls.send_email(subject, message)
+
+    @classmethod
+    def send_email(cls, subject, message):
         try:
             mail.send_message(recipients=[user.email for user in Finders.get_users()], html=message, subject=subject)
             return True
@@ -176,11 +172,11 @@ class Handlers():
             return False
 
     @classmethod
-    def get_machine_csv(cls, machine):
+    def get_device_csv(cls, device):
         try:
             outfile = open(app.config.CSV_FILE_PATH, 'w')
             outcsv = csv.writer(outfile)
-            records = machine.readings
+            records = device.readings
             outcsv.writerow([column.name for column in Readings.__mapper__.columns])
             [outcsv.writerow([getattr(curr, column.name) for column in Readings.__mapper__.columns]) for curr in records]
             return True

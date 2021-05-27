@@ -1,4 +1,4 @@
-from app.models import Users, Locations, Machines, Readings, Soils
+from app.models import Users, Locations, Devices, Readings, Soils
 
 class Finders():
 
@@ -43,17 +43,25 @@ class Finders():
         return Soils.query.filter_by(name=name).first()
 
     @classmethod
-    def get_machine_by_id(cls, id):
-        return Machines.query.filter_by(id=id).first()
+    def get_active_devices(cls):
+        return Devices.query.filter_by(status=True).all()
 
     @classmethod
-    def get_machine_by_name(cls, name):
-        return Machines.query.filter_by(name=name).first()
+    def get_device_by_id(cls, id):
+        return Devices.query.filter_by(id=id).first()
+
+    @classmethod
+    def get_device_by_name(cls, name):
+        return Devices.query.filter_by(name=name).first()
+
+    @classmethod
+    def get_device_last_reading(cls, device):
+        return Readings.query.filter(device_id=device.id).last()
 
     @classmethod
     def get_reading_by_msg_id(cls, msg_id):
         return Readings.query.filter_by(msg_id=msg_id).first()
 
     @classmethod
-    def get_last_reading_from_machine_id(cls, id):
-        return Readings.query.filter_by(machine_id=id).order_by(Readings.created_at.desc()).first()
+    def get_last_reading_from_device_id(cls, id):
+        return Readings.query.filter_by(device_id=id).order_by(Readings.created_at.desc()).first()

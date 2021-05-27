@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
-<form action="{{ url_for('create_machine') }}" method="get">
+<form action="{{ url_for('create_device') }}" method="get">
     <input type="hidden" name="location_id" value="{{ location.id }}"/>
     <button type="submit" class="btn btn-default">
-        Add Machine <span class="glyphicon glyphicon-plus"></span>
+        Add Device <span class="glyphicon glyphicon-plus"></span>
     </button>
 </form>
 
@@ -14,6 +14,8 @@
             <th class="th-sm">Name</th>
 
             <th class="th-sm">Master</th>
+
+            <th class="th-sm">Status</th>
 
             <th class="th-sm">Soil 20cm</th>
 
@@ -33,26 +35,27 @@
         </tr>
     </thead>
     <tbody>
-        {% for machine in location.machines %}
+        {% for device in location.devices %}
         <tr>
-            <td>{{ machine.name }}</td>
-            <td>{{ machine.id|int() == location.master_id|int() }}</td>
-            <td>{{ machine.soil_20.name }}</td>
-            <td>{{ machine.soil_40.name }}</td>
-            <td>{{ machine.soil_60.name }}</td>
-            <td>{{ machine.updating_20 }}</td>
-            <td>{{ machine.updating_40 }}</td>
-            <td>{{ machine.updating_60 }}</td>
-            <td>{{ machine.created_at }}</td>
-            <td>{{ machine.updated_at }}</td>
+            <td>{{ device.name }}</td>
+            <td>{{ device.id|int() == location.master_id|int() }}</td>
+            <td>{{ device.status }}</td>
+            <td>{{ device.soil_20.name }}</td>
+            <td>{{ device.soil_40.name }}</td>
+            <td>{{ device.soil_60.name }}</td>
+            <td>{{ device.updating_20 }}</td>
+            <td>{{ device.updating_40 }}</td>
+            <td>{{ device.updating_60 }}</td>
+            <td>{{ device.created_at }}</td>
+            <td>{{ device.updated_at }}</td>
             <td style="display: flex; justify-content: space-evenly;">
-                <form action="/machine/{{ machine.id }}" method="get">
+                <form action="/device/{{ device.id }}" method="get">
                     <button type="submit">Data</button>
                 </form>
-                <form action="/machine/{{ machine.id }}/edit" method="get">
+                <form action="/device/{{ device.id }}/edit" method="get">
                     <button type="submit">Edit</button>
                 </form>
-                <form action="/machine/{{ machine.id }}/delete" method="post">
+                <form action="/device/{{ device.id }}/delete" method="post">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <button type="submit">Delete</button>
                 </form>

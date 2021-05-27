@@ -43,10 +43,9 @@ class LocationValue(ValueComposite):
         super(LocationValue, self).initialize({})
         self.serialize_with(id=location.id)
         self.serialize_with(name=location.name)
-        self.serialize_with(status=location.status)
         self.serialize_with(latitude=location.latitude)
         self.serialize_with(longitude=location.longitude)
-        self.serialize_with(machines=MachinesValue(location.machines).to_dict())
+        self.serialize_with(devices=DevicesValue(location.devices).to_dict())
 
 class LocationsValue(ValueComposite):
     def __init__(self, locations):
@@ -59,7 +58,7 @@ class LocationsValue(ValueComposite):
                 "status": location.status,
                 "latitude": location.latitude,
                 "longitude": location.longitude,
-                "machines": MachinesValue(location.machines).to_dict()
+                "devices": DevicesValue(location.devices).to_dict()
             }
             locations_array.append(location_value)
         self.serialize_with(data=locations_array)
@@ -70,30 +69,32 @@ class SoilValue(ValueComposite):
         self.serialize_with(name=soil.name)
         self.serialize_with(humidity_level=soil.humidity_level)
 
-class MachineValue(ValueComposite):
-    def __init__(self, machine):
-        super(MachineValue, self).initialize({})
-        self.serialize_with(id=machine.id)
-        self.serialize_with(name=machine.name)
-        self.serialize_with(master=machine.is_master())
-        self.serialize_with(soil_20=SoilValue(machine.soil_20).to_dict())
-        self.serialize_with(soil_40=SoilValue(machine.soil_40).to_dict())
-        self.serialize_with(soil_60=SoilValue(machine.soil_60).to_dict())
-        self.serialize_with(readings=ReadingsValue(machine.readings).to_dict())
+class DeviceValue(ValueComposite):
+    def __init__(self, device):
+        super(DeviceValue, self).initialize({})
+        self.serialize_with(id=device.id)
+        self.serialize_with(name=device.name)
+        self.serialize_with(master=device.is_master())
+        self.serialize_with(soil_20=SoilValue(device.soil_20).to_dict())
+        self.serialize_with(soil_40=SoilValue(device.soil_40).to_dict())
+        self.serialize_with(soil_60=SoilValue(device.soil_60).to_dict())
+        self.serialize_with(readings=ReadingsValue(device.readings).to_dict())
+        self.serialize_with(status=device.status)
 
-class MachinesValue(ValueComposite):
-    def __init__(self, machines):
-        super(MachinesValue, self).initialize({})
-        machines_array = []
-        for machine in machines:
-            machine_value = {
-                "id": machine.id,
-				"name": machine.name,
-                "master": machine.is_master(),
-                "soil_20": SoilValue(machine.soil_20).to_dict(),
-                "soil_40": SoilValue(machine.soil_40).to_dict(),
-                "soil_60": SoilValue(machine.soil_60).to_dict(),
-                "readings": ReadingsValue(machine.readings).to_dict()
+class DevicesValue(ValueComposite):
+    def __init__(self, devices):
+        super(DevicesValue, self).initialize({})
+        devices_array = []
+        for device in devices:
+            device_value = {
+                "id": device.id,
+				"name": device.name,
+                "master": device.is_master(),
+                "soil_20": SoilValue(device.soil_20).to_dict(),
+                "soil_40": SoilValue(device.soil_40).to_dict(),
+                "soil_60": SoilValue(device.soil_60).to_dict(),
+                "readings": ReadingsValue(device.readings).to_dict(),
+                "status": device.status
             }
-            machines_array.append(machine_value)
-        self.serialize_with(data=machines_array)
+            devices_array.append(device_value)
+        self.serialize_with(data=devices_array)

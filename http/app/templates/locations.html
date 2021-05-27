@@ -32,10 +32,9 @@
             <td>{{ location.longitude }}</td>
             <td>{{ location.created_at }}</td>
             <td>{{ location.updated_at }}</td>
-            <td>{{ location.status }}</td>
             <td style="display: flex; justify-content: space-evenly;">
-                <form action="/location/{{ location.id }}/machines" method="get">
-                    <button type="submit">Machines</button>
+                <form action="/location/{{ location.id }}/devices" method="get">
+                    <button type="submit">Devices</button>
                 </form>
                 <form action="/location/{{ location.id }}/delete" method="post">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
