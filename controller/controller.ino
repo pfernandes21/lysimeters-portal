@@ -55,8 +55,6 @@ enum lysState
 enum lysState lysimeters[3] = {Normal, Normal, Normal};
 enum lysState nextLysimeters[3] = {Normal, Normal, Normal};
 
-time_t run_time = 0;
-
 long readVcc()
 {
   // Read 1.1V reference against AVcc
@@ -326,7 +324,6 @@ void setup()
   RTC.alarm(ALARM_1);
   RTC.squareWave(SQWAVE_NONE);
   RTC.alarmInterrupt(ALARM_1, true);
-  run_time = RTC.get();
 
   bc66.flush();
   while (!init_ack) {
@@ -469,7 +466,7 @@ void loop()
   Serial.print("Vcc: ");
   Serial.println(readVcc());
   //if battery low
-  if (RTC.get() > run_time + 60 && !pickupMsgSent && readVcc() < 50)
+  if (!pickupMsgSent && readVcc() < 45)
   {
     send_msg(",\"b\":\"low\"", 0);
   }
