@@ -8,8 +8,8 @@ class Config(object):
     TEMPLATES_AUTO_RELOAD = True
     SESSION_COOKIE_SECURE = False
 
-    MACHINE_API_TOKEN = os.environ.get('MACHINE_API_TOKEN') or "ola"
-    OPEN_WEATHER_KEY = os.environ.get('OPEN_WEATHER_KEY') or "ole"
+    MACHINE_API_TOKEN = os.environ.get('MACHINE_API_TOKEN')
+    OPEN_WEATHER_KEY = os.environ.get('OPEN_WEATHER_KEY')
    
     MAIL_SERVER = os.environ.get('MAIL_SERVER')
     MAIL_PORT = int(os.environ.get('MAIL_PORT') or 25)

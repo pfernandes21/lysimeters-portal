@@ -4,20 +4,23 @@
 
 nbUDP U;
 Coap coap(U);
-int t = 0;
 String msg = "";
+bool msg_sent = false;
 
 void callback_response(CoapPacket &packet, IPAddress ip, int port) {
   char p[packet.payloadlen + 1];
   memcpy(p, packet.payload, packet.payloadlen);
   p[packet.payloadlen] = NULL;
-  Serial.println(p);
+  if(!msg_sent && strcmp(p,"{\"status\": \"ack\"}") != 0) {
+   Serial.print(p);
+   msg_sent = true;
+  }
   msg = "";
 }
 
 void setup()
 {
-  t = millis();
+  int t = millis();
   String imei, mcc_mnc, sim_imsi, sim_iccid, uid;
   Dev.noSleep();
 
@@ -67,16 +70,15 @@ void loop()
     msg.trim();
     if (msg.length() > 0) {
       coap.put(IPAddress(85, 246, 38, 211), 5683, "lys", msg.c_str());
-      t = millis();
+      msg_sent = false;
     }
   }
 
-  if (msg.length() > 0 && millis() > t + 60000) {
+  if (msg.length() > 0) {
     //coap.put(IPAddress(146, 193, 41, 162), 5683, "lys", msg.c_str());
-    coap.put(IPAddress(85, 246, 38, 211), 5683, "lys", msg.c_str());
-    t = millis();
+    coap.put(IPAddress(85, 246, 169, 148), 5683, "lys", msg.c_str());
   }
 
-  delay(4000);
+  delay(1000);
   coap.loop();
 }

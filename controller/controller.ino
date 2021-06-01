@@ -30,7 +30,7 @@ SoftwareSerial bc66(12, 13);
 #define pressureUpperThreshold 45
 #define pressureLowerThreshold 40
 #define PRESSURIZE_TIMEOUT 10000
-#define MSG_TIMEOUT 10000
+#define MSG_TIMEOUT 15000
 
 int init_ack = false;
 int msg_id = 0;
@@ -54,6 +54,8 @@ enum lysState
 };
 enum lysState lysimeters[3] = {Normal, Normal, Normal};
 enum lysState nextLysimeters[3] = {Normal, Normal, Normal};
+
+time_t run_time = 0;
 
 long readVcc()
 {
@@ -84,6 +86,7 @@ long readVcc()
 void hibernate(time_t wake_time)
 {
   Serial.println("Sleep until Day: " + String(day(wake_time)) + ", Time: " + String(hour(wake_time)) + ":" + String(minute(wake_time)) + ":" + String(second(wake_time)));
+  delay(100);
   RTC.setAlarm(ALM1_MATCH_DATE, second(wake_time), minute(wake_time), hour(wake_time), day(wake_time));
   RTC.alarm(ALARM_1);
   sleep_enable();
@@ -97,6 +100,7 @@ void hibernate(time_t wake_time)
   sleep_cpu();
   t = RTC.get();
   Serial.println("WakeUp Time: " + String(hour(t)) + ":" + String(minute(t)) + ":" + String(second(t)));
+  bc66.flush();
 }
 
 void wakeUp()
@@ -230,7 +234,7 @@ void recv_msg(char const *warning, int attempt, char * msg) {
   {
     init_ack = true;
     time_t wake_time = resp["wake"];
-    if (wake_time > (RTC.get() + 3600) && wake_time < (RTC.get() + 259200) && lysimeters[0] == Normal && lysimeters[1] == Normal && lysimeters[2] == Normal)
+    if (wake_time > (RTC.get() + 100) && wake_time < (RTC.get() + 259200) && lysimeters[0] == Normal && lysimeters[1] == Normal && lysimeters[2] == Normal)
     {
       hibernate(wake_time);
     }
@@ -269,10 +273,6 @@ void recv_msg(char const *warning, int attempt, char * msg) {
 
 bool send_msg(char const *warning, int attempt)
 {
-  char * pch;
-  const char * r_msg_c;
-  String r_msg;
-
   if (attempt < 3)
   {
     dtostrf(getHumidity(humidityPin20), 4, 3, humidity20_msg);
@@ -291,20 +291,13 @@ bool send_msg(char const *warning, int attempt)
   }
 
   long t = millis();
+  int i = 0;
   while (!bc66.available() && millis() < (t + MSG_TIMEOUT))
   {
   }
   if (bc66.available() > 0)
   {
-    r_msg = bc66.readString();
-    r_msg_c = r_msg.c_str();
-    pch = strtok (r_msg_c, "\n");
-    while (pch != NULL)
-    {
-      recv_msg(warning, attempt, pch);
-      pch = strtok (NULL, "\n");
-    }
-    return true;
+    recv_msg(warning, attempt, bc66.readString().c_str());
   }
   return false;
 }
@@ -333,25 +326,12 @@ void setup()
   RTC.alarm(ALARM_1);
   RTC.squareWave(SQWAVE_NONE);
   RTC.alarmInterrupt(ALARM_1, true);
+  run_time = RTC.get();
 
   bc66.flush();
-  //  while (!init_ack) {
-  //    if (!send_msg(",\"init\":\"true\"", 0)) {
-  //      while (!bc66.available())
-  //      {}
-  //      if (bc66.available() > 0)
-  //      {
-  //        String r_msg = bc66.readString();
-  //        const char * m = r_msg.c_str();
-  //        char * pch = strtok (m, "\n");
-  //        while (pch != NULL)
-  //        {
-  //          recv_msg("", 0, pch);
-  //          pch = strtok (NULL, "\n");
-  //        }
-  //      }
-  //    }
-  //  }
+  while (!init_ack) {
+    send_msg(",\"init\":\"true\"", 0);
+  }
 }
 
 void loop()
@@ -486,11 +466,13 @@ void loop()
     pressurizeValve(valvePin60);
   }
 
+  Serial.print("Vcc: ");
+  Serial.println(readVcc());
   //if battery low
-  //  if (!pickupMsgSent && readVcc() < 50)
-  //  {
-  //    send_msg(",\"b\":\"low\"", 0);
-  //  }
+  if (RTC.get() > run_time + 60 && !pickupMsgSent && readVcc() < 50)
+  {
+    send_msg(",\"b\":\"low\"", 0);
+  }
 
-  delay(5000);
+  delay(4000);
 }

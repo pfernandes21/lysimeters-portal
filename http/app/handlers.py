@@ -5,7 +5,7 @@ import hashlib
 import random
 import string
 import csv
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import requests
 
 class Handlers():
@@ -22,7 +22,7 @@ class Handlers():
         
         if user:
             subject="Lysimeters Portal - Registration"
-            message=f'Successfully registered in <a href="https://google.pt">Lysimeters Portal</a><br><br><b>Username</b>: {user.username}<br><b>Password</b>: {password}'
+            message=f'Successfully registered in <a href="http://146.193.41.162:9001/">Lysimeters Portal</a><br><br><b>Username</b>: {user.username}<br><b>Password</b>: {password}'
             print(message)
             try:
                 mail.send_message(recipients=['pedrocoelhofernandes@gmail.com'], html=message, subject=subject)
@@ -91,7 +91,7 @@ class Handlers():
 
     @classmethod
     def check_time_hash(cls, time):
-        now = datetime.now()
+        now = datetime.now(timezone.utc)()
 
         for i in range(5):
             date = now + timedelta(minutes=i)
@@ -119,21 +119,17 @@ class Handlers():
 
         for hour in hourlyWeather:
             if ("rain" in hour) and (hour["rain"]["1h"] > 0):
-                hour_time = datetime.fromtimestamp(int(hour["dt"]))
-                if hour_time > (datetime.now() + timedelta(days=3)):
-                    return datetime.now().replace(hour=4, minute=0) + timedelta(days=2)
-                elif hour_time > (datetime.now() + timedelta(hours=1, minutes=15)):
-                    return hour_time
+                if hour["dt"] - datetime.now(timezone.utc).timestamp() > 75*60:
+                    if hour["dt"] - datetime.now(timezone.utc).timestamp() > 3*24*60*60:
+                        return datetime.now(timezone.utc)().replace(hour=4, minute=0) + timedelta(days=2)
+                    else:
+                        return hour["dt"]
 
-        final_date = datetime.fromtimestamp(int(hour["dt"]))
-        if final_date > (datetime.now() + timedelta(hours=1, minutes=15)):
-            return final_date
-
-        return datetime.now().replace(hour=4, minute=0) + timedelta(days=2)
+        return datetime.now(timezone.utc).replace(hour=4, minute=0).timestamp()
 
     @classmethod
     def send_sample_start_email(cls, device, lysimeter, location):
-        subject=f"Lysimeters Portal - Sample Collected in {location}"
+        subject=f"Lysimeters Portal - Collecting in {location}"
         message=f"The {device} {lysimeter} located in {location} started collecting a sample at {datetime.now().strftime('%d/%m/%Y, %H:%M:%S')}."
         return cls.send_email(subject, message)
 
@@ -145,7 +141,7 @@ class Handlers():
 
     @classmethod
     def send_sample_error_email(cls, device, lysimeter, location):
-        subject=f"Lysimeters Portal - Sample Collected in {location}"
+        subject=f"Lysimeters Portal - Error Collected in {location}"
         message=f"The {device} {lysimeter} located in {location} started malfunctioning at {datetime.now().strftime('%d/%m/%Y, %H:%M:%S')}."
         return cls.send_email(subject, message)
 

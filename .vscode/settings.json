@@ -1,4 +1,7 @@
 {
     "python.autoComplete.extraPaths": ["./http"],
-    "python.pythonPath": "/home/pedro/.virtualenvs/tese/bin/python"
+    "python.pythonPath": "/home/pedro/.virtualenvs/tese/bin/python",
+    "python.analysis.extraPaths": [
+        "./http"
+    ]
 }

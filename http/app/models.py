@@ -190,6 +190,7 @@ class Devices(db.Model, ModelMixin):
     updating_20 = db.Column(db.Boolean, default=False)
     updating_40 = db.Column(db.Boolean, default=False)
     updating_60 = db.Column(db.Boolean, default=False)
+    sample = db.Column(db.Integer, default=0)
 
     def is_master(self):
         return self.id == self.location.master_id
@@ -200,7 +201,7 @@ class Devices(db.Model, ModelMixin):
 class Readings(db.Model, ModelMixin):
     __tablename__ = 'readings'
 
-    msg_id = db.Column(db.Integer, index=True, unique=True)
+    msg_id = db.Column(db.Integer, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     device_id = db.Column(db.Integer, db.ForeignKey('devices.id'))
     device = db.relationship("Devices", back_populates="readings")
@@ -214,6 +215,7 @@ class Readings(db.Model, ModelMixin):
     water_level_20 = db.Column(db.Boolean, default=False)
     water_level_40 = db.Column(db.Boolean, default=False)
     water_level_60 = db.Column(db.Boolean, default=False)
+    sample = db.Column(db.Integer)
 
     def __repr__(self):
         return '<Reading {}, Device {}>'.format(self.id, self.device.id)

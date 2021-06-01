@@ -8,7 +8,7 @@ from app.handlers import Handlers
 from app.values import LocationsValue, LocationValue, DeviceValue
 import json
 from types import SimpleNamespace
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 @app.route("/health")
 def health():
@@ -337,12 +337,12 @@ def reading():
     # if not Handlers.check_time_hash(time.lower()):
     #     return jsonify({"status":"error"}), 401
 
-    if Finders.get_reading_by_msg_id(msg_id):
-        return jsonify({"status":"ack"}) 
-
     device = Finders.get_device_by_id(id)
     if not device:
         return jsonify({"status":"error"}), 404
+
+    if not hasattr(data, "init") and Finders.get_reading_by_device_and_msg_id(device, msg_id):
+        return jsonify({"status":"ack"}) 
 
     if not device.status:
         Handlers.update_device(device, status=True)
@@ -358,49 +358,53 @@ def reading():
         return jsonify({"status":"error"}), 500
 
     if hasattr(data, "l20"):
-        Handlers.create_reading(msg_id=msg_id, device_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+        Handlers.create_reading(msg_id=msg_id, device_id=id, sample=device.sample, \
+            humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
             motor_20=(data.l20=="start"), motor_40=last.motor_40, motor_60=last.motor_60, \
             water_level_20=(data.l20=="end"), water_level_40=last.water_level_40, water_level_60=last.water_level_60)
         
-        if data.l20=="start" and Handlers.send_sample_start_email(device.name, "20cm lysimeter", device.location):
+        if data.l20=="start" and Handlers.send_sample_start_email(device.name, "20cm lysimeter", device.location.name):
             return jsonify({"status":"pickup"})
-        elif data.l20=="end" and Handlers.send_sample_end_email(device.name, "20cm lysimeter", device.location):
+        elif data.l20=="end" and Handlers.send_sample_end_email(device.name, "20cm lysimeter", device.location.name):
             return jsonify({"status":"pickup"})
-        elif data.l20=="error" and Handlers.send_sample_error_email(device.name, "20cm lysimeter", device.location):
+        elif data.l20=="error" and Handlers.send_sample_error_email(device.name, "20cm lysimeter", device.location.name):
             return jsonify({"status":"pickup"})
         else:
             return jsonify({"status":"error"}), 500
 
     elif hasattr(data, "l40"):
-        Handlers.create_reading(msg_id=msg_id, device_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+        Handlers.create_reading(msg_id=msg_id, device_id=id, sample=device.sample, \
+            humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
             motor_40=(data.l40=="start"), motor_20=last.motor_20, motor_60=last.motor_60, \
             water_level_40=(data.l40=="end"), water_level_20=last.water_level_20, water_level_60=last.water_level_60)
         
-        if data.l40=="start" and Handlers.send_sample_start_email(device.name, "40cm lysimeter", device.location):
+        if data.l40=="start" and Handlers.send_sample_start_email(device.name, "40cm lysimeter", device.location.name):
             return jsonify({"status":"pickup"})
-        elif data.l40=="end" and Handlers.send_sample_end_email(device.name, "40cm lysimeter", device.location):
+        elif data.l40=="end" and Handlers.send_sample_end_email(device.name, "40cm lysimeter", device.location.name):
             return jsonify({"status":"pickup"})
-        elif data.l40=="error" and Handlers.send_sample_error_email(device.name, "40cm lysimeter", device.location):
+        elif data.l40=="error" and Handlers.send_sample_error_email(device.name, "40cm lysimeter", device.location.name):
             return jsonify({"status":"pickup"})
         else:
             return jsonify({"status":"error"}), 500
     
     elif hasattr(data, "l60"):
-        Handlers.create_reading(msg_id=msg_id, device_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+        Handlers.create_reading(msg_id=msg_id, device_id=id, sample=device.sample, \
+            humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
             motor_60=(data.l60=="start"), motor_40=last.motor_40, motor_20=last.motor_20, \
             water_level_60=(data.l60=="end"), water_level_40=last.water_level_40, water_level_20=last.water_level_20)
         
-        if data.l60=="start" and Handlers.send_sample_start_email(device.name, "60cm lysimeter", device.location):
+        if data.l60=="start" and Handlers.send_sample_start_email(device.name, "60cm lysimeter", device.location.name):
             return jsonify({"status":"pickup"})
-        elif data.l60=="end" and Handlers.send_sample_end_email(device.name, "60cm lysimeter", device.location):
+        elif data.l60=="end" and Handlers.send_sample_end_email(device.name, "60cm lysimeter", device.location.name):
             return jsonify({"status":"pickup"})
-        elif data.l60=="error" and Handlers.send_sample_error_email(device.name, "60cm lysimeter", device.location):
+        elif data.l60=="error" and Handlers.send_sample_error_email(device.name, "60cm lysimeter", device.location.name):
             return jsonify({"status":"pickup"})
         else:
             return jsonify({"status":"error"}), 500
 
     elif hasattr(data, "b"):
-        Handlers.create_reading(msg_id=msg_id, device_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+        Handlers.create_reading(msg_id=msg_id, device_id=id, sample=device.sample, \
+            humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
             motor_20=last.motor_20, motor_40=last.motor_40, motor_60=last.motor_60, \
             water_level_20=last.water_level_20, water_level_40=last.water_level_40, water_level_60=last.water_level_60)
 
@@ -411,17 +415,21 @@ def reading():
 
     else:
         if hasattr(data, "init"):
-            Handlers.create_reading(msg_id=msg_id, device_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+            device = Handlers.update_device(device, sample=(device.sample + 1))
+            Handlers.create_reading(msg_id=msg_id, device_id=id, sample=device.sample, \
+                humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
                 motor_20=False, motor_40=False, motor_60=False, \
                 water_level_20=False, water_level_40=False, water_level_60=False)
         else:
             if last is None:
-                Handlers.create_reading(msg_id=msg_id, device_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+                Handlers.create_reading(msg_id=msg_id, device_id=id, sample=device.sample, \
+                    humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
                     motor_20=False, motor_40=False, motor_60=False, \
                     water_level_20=False, water_level_40=False, water_level_60=False)
 
             try:
-                Handlers.create_reading(msg_id=msg_id, device_id=id, humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
+                Handlers.create_reading(msg_id=msg_id, device_id=id, sample=device.sample, \
+                    humidity_20=humidity_20, humidity_40=humidity_40, humidity_60=humidity_60, pressure=pressure, \
                     motor_20=last.motor_20, motor_40=last.motor_40, motor_60=last.motor_60, \
                     water_level_20=last.water_level_20, water_level_40=last.water_level_40, water_level_60=last.water_level_60)
             except:
@@ -444,5 +452,4 @@ def reading():
         if rain_time is None:
             return jsonify({"status":"error"}), 500
         else:
-            #return jsonify({"status":"ok", "wake":int(rain_time.timestamp())})
-            return jsonify({"status":"ok", "wake":int(datetime.now().timestamp()) + 90})
+            return jsonify({"status":"ok", "wake":int(rain_time)})

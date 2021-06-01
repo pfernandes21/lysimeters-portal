@@ -59,8 +59,8 @@ class Finders():
         return Readings.query.filter_by(device_id=device.id).order_by(Readings.created_at.desc()).first()
 
     @classmethod
-    def get_reading_by_msg_id(cls, msg_id):
-        return Readings.query.filter_by(msg_id=msg_id).first()
+    def get_reading_by_device_and_msg_id(cls, device, msg_id):
+        return Readings.query.filter_by(device_id=device.id, msg_id=msg_id, sample=device.sample).first()
 
     @classmethod
     def get_last_reading_from_device_id(cls, id):
