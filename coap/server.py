@@ -4,8 +4,8 @@ from coapthon import defines
 import json
 import requests
 
-# http_api_url = 'http://146.193.41.162:9000/api/reading'
-http_api_url = "http://7903d0bd85ec.ngrok.io/api/reading"
+# http_api_url = 'http://146.193.41.162:9001/api/reading'
+http_api_url = "http://011cba3206a4.ngrok.io/api/reading"
 
 class LysResource(Resource):
     def __init__(self, name="LysResource", coap_server=None):
@@ -29,17 +29,15 @@ class LysResource(Resource):
         try:
             json.loads(request.payload)
         except:
-            response.payload = json.dumps({"error":"wrong format"})
+            response.payload = json.dumps({"status":"error"})
             return self, response
 
         try:
             resp = requests.post(http_api_url, json = {'data':request.payload}, headers={'Authorization':'Bearer 123'}, timeout=10)
-        except Exception:
-            response.content_type = defines.Content_types["application/json"]
-            response.payload = json.dumps({"error":"failed to proxy request"})
+            response.payload = json.dumps(resp.json())
+        except:
+            response.payload = json.dumps({"status":"error"})
             return self, response
-
-        response.payload = json.dumps(resp.json())
 
         return self, response
 
@@ -54,9 +52,7 @@ class CoAPServer(CoAP):
     def __init__(self, host, port, multicast=False):
         CoAP.__init__(self,(host,port),multicast)
         self.add_resource('lys/',LysResource())
-        # self.add_resource('/',LysResource())
         print(f"CoAP server started on {str(host)}:{str(port)}")
-        # print(self.root.dump())
 
 def main():
     ip = "0.0.0.0"
